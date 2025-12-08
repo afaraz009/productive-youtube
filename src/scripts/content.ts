@@ -946,12 +946,18 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
     secondary.tagName || secondary.id || "unknown"
   );
 
-  // Group transcript entries into chunks
+  // Group transcript entries into 25-second chunks with individual lines
   const CHUNK_SIZE = 25; // seconds
-  const chunkedTranscript: { start: number; text: string }[] = [];
-  let currentChunk: { start: number; text: string } | null = null;
+  const chunkedTranscript: {
+    start: number;
+    lines: { text: string; start: number; duration: number }[];
+  }[] = [];
+  let currentChunk: {
+    start: number;
+    lines: { text: string; start: number; duration: number }[];
+  } | null = null;
 
-  transcript.forEach((line) => {
+  transcript.forEach((line, index) => {
     // Decode HTML entities and clean the text
     let decodedText = decodeHtmlEntities(line.text);
     decodedText = cleanTranscriptText(decodedText);
@@ -961,6 +967,19 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
 
     const chunkStart = Math.floor(line.start / CHUNK_SIZE) * CHUNK_SIZE; // Round down to nearest chunk
 
+    // Calculate duration for this line
+    const nextStart =
+      index < transcript.length - 1
+        ? transcript[index + 1].start
+        : line.start + 2;
+    const lineDuration = nextStart - line.start;
+
+    const lineData = {
+      text: decodedText,
+      start: line.start,
+      duration: lineDuration,
+    };
+
     if (!currentChunk || currentChunk.start !== chunkStart) {
       // Start a new chunk
       if (currentChunk) {
@@ -968,11 +987,11 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
       }
       currentChunk = {
         start: chunkStart,
-        text: decodedText,
+        lines: [lineData],
       };
     } else {
       // Add to current chunk
-      currentChunk.text += " " + decodedText;
+      currentChunk.lines.push(lineData);
     }
   });
 
@@ -1078,7 +1097,8 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
   copyButton.onclick = (e) => {
     e.stopPropagation(); // Prevent header click event from triggering
     const transcriptText = chunkedTranscript
-      .map((chunk) => `[${formatTimestamp(chunk.start)}] ${chunk.text}`)
+      .flatMap((chunk) => chunk.lines)
+      .map((line) => `[${formatTimestamp(line.start)}] ${line.text}`)
       .join(" \n\n");
     navigator.clipboard.writeText(transcriptText);
     copyButton.textContent = "Copied!";
@@ -1174,68 +1194,86 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
   };
 
   chunkedTranscript.forEach((chunk) => {
-    const lineEl = document.createElement("div");
-    lineEl.className = "transcript-line";
-    lineEl.dataset.start = chunk.start.toString();
-    // Add inline styles for transcript line
-    lineEl.style.cssText = `
-      margin-bottom: 0.75rem;
-      padding: 0.75rem;
-      border-radius: 0.5rem;
-      transition: background-color 0.2s;
-    `;
-
-    lineEl.onmouseover = function () {
-      // Check if dark mode is active
-      const isDarkMode =
-        document.documentElement.classList.contains("dark") ||
-        document.querySelector("html")?.getAttribute("dark") !== null ||
-        document.body.style.backgroundColor === "rgb(19, 19, 19)" ||
-        document.body.style.backgroundColor === "#131313";
-
-      lineEl.style.backgroundColor = isDarkMode ? "#374151" : "#f3f4f6";
-    };
-    lineEl.onmouseout = function () {
-      lineEl.style.backgroundColor = "transparent";
-    };
-
-    const timestampEl = document.createElement("span");
-    timestampEl.className = "transcript-timestamp";
-    timestampEl.textContent = formatTimestamp(chunk.start);
-    // Add inline styles for timestamp
-    timestampEl.style.cssText = `
+    // Create chunk header with 25s timestamp
+    const chunkHeader = document.createElement("div");
+    chunkHeader.className = "transcript-chunk-header";
+    chunkHeader.style.cssText = `
       color: #2563eb;
       font-weight: 600;
       cursor: pointer;
-      margin-right: 0.75rem;
-      display: inline-block;
-      min-width: 50px;
-      font-size: 2rem;
+      font-size: 0.9rem;
       font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      margin-bottom: 0.5rem;
+      margin-top: 1rem;
+      padding: 0.25rem 0.5rem;
+      background-color: rgba(37, 99, 235, 0.1);
+      border-radius: 0.25rem;
+      display: inline-block;
     `;
-    timestampEl.onclick = () => {
+    chunkHeader.textContent = formatTimestamp(chunk.start);
+    chunkHeader.onclick = () => {
       const video = document.querySelector("video");
       if (video) {
         video.currentTime = chunk.start;
       }
     };
+    content.appendChild(chunkHeader);
 
-    const textEl = document.createElement("span");
-    textEl.className = "transcript-text";
-    textEl.textContent = chunk.text;
-    // Add inline styles for text with professional font
-    textEl.style.cssText = `
-      color: #1f2937;
-      font-size: 2rem;
-      line-height: 1.7;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      font-weight: 400;
-      letter-spacing: 0.01em;
-    `;
+    // Render each line within the chunk
+    chunk.lines.forEach((lineData) => {
+      const lineEl = document.createElement("div");
+      lineEl.className = "transcript-line";
+      lineEl.dataset.start = lineData.start.toString();
+      lineEl.dataset.duration = lineData.duration.toString();
+      // Add inline styles for transcript line
+      lineEl.style.cssText = `
+        margin-bottom: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+      `;
 
-    lineEl.appendChild(timestampEl);
-    lineEl.appendChild(textEl);
-    content.appendChild(lineEl);
+      lineEl.onmouseover = function () {
+        // Check if dark mode is active
+        const isDarkMode =
+          document.documentElement.classList.contains("dark") ||
+          document.querySelector("html")?.getAttribute("dark") !== null ||
+          document.body.style.backgroundColor === "rgb(19, 19, 19)" ||
+          document.body.style.backgroundColor === "#131313";
+
+        if (!lineEl.classList.contains("active")) {
+          lineEl.style.backgroundColor = isDarkMode
+            ? "rgba(55, 65, 81, 0.5)"
+            : "rgba(243, 244, 246, 0.8)";
+        }
+      };
+      lineEl.onmouseout = function () {
+        if (!lineEl.classList.contains("active")) {
+          lineEl.style.backgroundColor = "transparent";
+        }
+      };
+
+      const textEl = document.createElement("span");
+      textEl.className = "transcript-text";
+      textEl.textContent = lineData.text;
+      textEl.style.cssText = `
+        color: #1f2937;
+        font-size: 1.1rem;
+        line-height: 1.6;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        transition: color 0.3s ease;
+        cursor: pointer;
+      `;
+      textEl.onclick = () => {
+        const video = document.querySelector("video");
+        if (video) {
+          video.currentTime = lineData.start;
+        }
+      };
+
+      lineEl.appendChild(textEl);
+      content.appendChild(lineEl);
+    });
   });
 
   // Add dark mode support
@@ -1432,39 +1470,89 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
     video.addEventListener("timeupdate", () => {
       const currentTime = video.currentTime;
       const lines = content.querySelectorAll(".transcript-line");
+      const isCurrentlyDarkMode = isDarkMode();
+
       lines.forEach((line) => {
         const lineEl = line as HTMLElement;
         const start = parseFloat(lineEl.dataset.start || "0");
-        // Highlight if current time is within this chunk
-        if (currentTime >= start && currentTime < start + CHUNK_SIZE) {
+        const duration = parseFloat(lineEl.dataset.duration || "2");
+        const end = start + duration;
+
+        // Highlight if current time is within this specific line's timeframe
+        if (currentTime >= start && currentTime < end) {
           lineEl.classList.add("active");
+          const textEl = lineEl.querySelector(
+            ".transcript-text"
+          ) as HTMLElement;
+          const timestampEl = lineEl.querySelector(
+            ".transcript-timestamp"
+          ) as HTMLElement;
+
           // Add inline styles for active line
-          const isCurrentlyDarkMode = isDarkMode();
           lineEl.style.cssText = `
-            margin-bottom: 0.75rem;
-            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem 0.75rem;
             border-radius: 0.5rem;
-            transition: background-color 0.2s;
-            background-color: ${isCurrentlyDarkMode ? "#1e3a8a" : "#dbeafe"};
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: baseline;
+            gap: 0.75rem;
+            background-color: ${
+              isCurrentlyDarkMode
+                ? "rgba(30, 58, 138, 0.3)"
+                : "rgba(219, 234, 254, 0.5)"
+            };
             border-left: 4px solid #3b82f6;
           `;
+
+          if (textEl) {
+            textEl.style.color = isCurrentlyDarkMode ? "#93c5fd" : "#1e40af";
+            textEl.style.fontWeight = "500";
+          }
+
+          if (timestampEl) {
+            timestampEl.style.color = "#3b82f6";
+          }
         } else {
           lineEl.classList.remove("active");
+          const textEl = lineEl.querySelector(
+            ".transcript-text"
+          ) as HTMLElement;
+          const timestampEl = lineEl.querySelector(
+            ".transcript-timestamp"
+          ) as HTMLElement;
+
           // Reset to normal styles
-          const isCurrentlyDarkMode = isDarkMode();
           lineEl.style.cssText = `
-            margin-bottom: 0.75rem;
-            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem 0.75rem;
             border-radius: 0.5rem;
-            transition: background-color 0.2s;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: baseline;
+            gap: 0.75rem;
           `;
+
+          if (textEl) {
+            textEl.style.color = isCurrentlyDarkMode ? "#e5e7eb" : "#1f2937";
+            textEl.style.fontWeight = "400";
+          }
+
+          if (timestampEl) {
+            timestampEl.style.color = "#2563eb";
+          }
+
           lineEl.onmouseover = function () {
-            lineEl.style.backgroundColor = isCurrentlyDarkMode
-              ? "#374151"
-              : "#f3f4f6";
+            if (!lineEl.classList.contains("active")) {
+              lineEl.style.backgroundColor = isCurrentlyDarkMode
+                ? "rgba(55, 65, 81, 0.5)"
+                : "rgba(243, 244, 246, 0.8)";
+            }
           };
           lineEl.onmouseout = function () {
-            lineEl.style.backgroundColor = "transparent";
+            if (!lineEl.classList.contains("active")) {
+              lineEl.style.backgroundColor = "transparent";
+            }
           };
         }
       });
