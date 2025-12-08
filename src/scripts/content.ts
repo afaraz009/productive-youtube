@@ -644,97 +644,298 @@ function throttledRemoveShortsButton(): void {
   shortsButtonTimeoutId = window.setTimeout(removeShortsButton, 100);
 }
 
-
 function getVideoId() {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get("v");
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const v = urlParams.get("v");
+    if (v) return v;
+
+    // Try global player response (works on many YouTube pages)
+    // @ts-ignore
+    const yipr = (window as any).ytInitialPlayerResponse;
+    if (yipr && yipr.videoDetails && yipr.videoDetails.videoId) {
+      return yipr.videoDetails.videoId;
+    }
+
+    // Try canonical link or meta tags
+    const canonical = document.querySelector(
+      'link[rel="canonical"]'
+    ) as HTMLLinkElement | null;
+    if (canonical && canonical.href) {
+      const m = canonical.href.match(/[?&]v=([^&]+)/);
+      if (m && m[1]) return m[1];
+      // fallback: sometimes canonical contains full watch path
+      const p = canonical.href.match(/watch\/([a-zA-Z0-9_-]+)/);
+      if (p && p[1]) return p[1];
+    }
+
+    // Fallback: try to parse from the URL directly
+    const fromHref =
+      window.location.href.match(/[?&]v=([a-zA-Z0-9_-]+)/) ||
+      window.location.href.match(/watch\/([a-zA-Z0-9_-]+)/);
+    if (fromHref && fromHref[1]) return fromHref[1];
+  } catch (e) {
+    console.warn("getVideoId: error while extracting video id", e);
+  }
+
+  return null;
 }
 
 async function fetchVideoPage(videoId: string) {
+  console.log(`Fetching video page for video ID: ${videoId}`);
   const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
   return response.text();
 }
 
 function extractApiKey(html: string) {
   const match = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/);
-  return match ? match[1] : null;
+  if (match && match[1]) {
+    console.log("Productive YouTube: API key extracted successfully");
+    return match[1];
+  }
+  console.warn(
+    "Productive YouTube: Could not extract API key from video page HTML"
+  );
+  return null;
 }
 
 async function fetchPlayerApi(videoId: string, apiKey: string) {
+  console.log("Productive YouTube: Fetching player API response...");
   const response = await fetch(
     `https://www.youtube.com/youtubei/v1/player?key=${apiKey}`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       },
       body: JSON.stringify({
         context: {
           client: {
             clientName: "WEB",
-            clientVersion: "2.20210721.00.00",
+            clientVersion: "2.20240101.00.00",
           },
         },
         videoId: videoId,
       }),
     }
   );
-  return response.json();
+  if (!response.ok) {
+    console.error(
+      "Productive YouTube: Player API HTTP error:",
+      response.status
+    );
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  const data = await response.json();
+  console.log(
+    "Productive YouTube: Player API response received, has captions:",
+    !!data?.captions
+  );
+  return data;
 }
 
 function extractTranscriptUrl(playerApiResponse: any) {
+  console.log("Productive YouTube: Extracting transcript URL...");
   const captionTracks =
     playerApiResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-  if (!captionTracks) {
+
+  if (!captionTracks || captionTracks.length === 0) {
+    console.warn(
+      "Productive YouTube: No caption tracks found in player response"
+    );
     return null;
   }
 
-  const transcriptTrack = captionTracks.find((track: any) => track.kind === "asr");
-  return transcriptTrack ? transcriptTrack.baseUrl : null;
+  console.log(
+    `Productive YouTube: Found ${captionTracks.length} caption track(s)`
+  );
+
+  // Log all available languages for debugging
+  captionTracks.forEach((track: any, index: number) => {
+    console.log(
+      `Track ${index + 1}: ${track.languageCode || "unknown"} - ${
+        track.name?.simpleText || "unknown name"
+      }`
+    );
+  });
+
+  // Priority 1: Try to find English caption track (en, en-US, en-GB, etc.)
+  let transcriptTrack = captionTracks.find(
+    (track: any) =>
+      track.baseUrl &&
+      track.languageCode &&
+      track.languageCode.toLowerCase().startsWith("en")
+  );
+
+  // Priority 2: If no English track, try to find auto-generated English
+  if (!transcriptTrack) {
+    transcriptTrack = captionTracks.find(
+      (track: any) =>
+        track.baseUrl &&
+        track.name?.simpleText &&
+        (track.name.simpleText.toLowerCase().includes("english") ||
+          track.name.simpleText.toLowerCase().includes("auto-generated"))
+    );
+  }
+
+  // Priority 3: If still no English track, use any available track with baseUrl
+  if (!transcriptTrack) {
+    transcriptTrack = captionTracks.find((track: any) => track.baseUrl);
+  }
+
+  // Priority 4: Last resort - use first track
+  if (!transcriptTrack && captionTracks.length > 0) {
+    transcriptTrack = captionTracks[0];
+  }
+
+  if (!transcriptTrack || !transcriptTrack.baseUrl) {
+    console.warn(
+      "Productive YouTube: Could not find caption track with baseUrl"
+    );
+    return null;
+  }
+
+  console.log(
+    "Productive YouTube: Selected caption track:",
+    transcriptTrack.languageCode || "unknown language",
+    "-",
+    transcriptTrack.name?.simpleText || "no name"
+  );
+  return transcriptTrack.baseUrl;
 }
 
 async function fetchTranscriptXml(url: string) {
-  const response = await fetch(url);
-  return response.text();
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const text = await response.text();
+    if (!text) {
+      throw new Error("Empty transcript response");
+    }
+    return text;
+  } catch (error) {
+    console.error("Productive YouTube: Error fetching transcript XML:", error);
+    throw error;
+  }
 }
 
 function parseTranscript(xml: string) {
-  const parser = new DOMParser();
-  const xmlDoc = parser.parseFromString(xml, "text/xml");
-  const textNodes = xmlDoc.getElementsByTagName("text");
-  const transcript = [];
-  for (let i = 0; i < textNodes.length; i++) {
-    const text = textNodes[i].textContent || "";
-    const start = parseFloat(textNodes[i].getAttribute("start") || "0");
-    transcript.push({ text, start });
+  try {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xml, "text/xml");
+
+    // Check for XML parsing errors
+    if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
+      console.error("Productive YouTube: XML parsing error");
+      return [];
+    }
+
+    const textNodes = xmlDoc.getElementsByTagName("text");
+    if (textNodes.length === 0) {
+      console.warn("Productive YouTube: No text nodes found in transcript XML");
+      return [];
+    }
+
+    const transcript = [];
+    for (let i = 0; i < textNodes.length; i++) {
+      const text = textNodes[i].textContent || "";
+      const start = parseFloat(textNodes[i].getAttribute("start") || "0");
+      if (text.trim()) {
+        // Only add non-empty text
+        transcript.push({ text, start });
+      }
+    }
+    return transcript;
+  } catch (error) {
+    console.error("Productive YouTube: Error parsing transcript:", error);
+    return [];
   }
-  return transcript;
 }
 
 // Helper function to decode HTML entities
 function decodeHtmlEntities(text: string): string {
-  const textArea = document.createElement('textarea');
+  const textArea = document.createElement("textarea");
   textArea.innerHTML = text;
   return textArea.value;
 }
 
 function displayTranscript(transcript: { text: string; start: number }[]) {
-  const secondary = document.querySelector("#secondary");
+  console.log(
+    "Productive YouTube: displayTranscript function called with",
+    transcript.length,
+    "entries"
+  );
+
+  // Try to find the secondary container
+  let secondary = document.querySelector("#secondary");
+
   if (!secondary) {
+    console.log(
+      "Productive YouTube: #secondary not found, trying alternatives..."
+    );
+    secondary = document.querySelector(
+      "ytd-watch-next-secondary-results-renderer"
+    );
+  }
+  if (!secondary) {
+    console.log(
+      "Productive YouTube: ytd-watch-next-secondary-results-renderer not found, trying #secondary-inner..."
+    );
+    secondary = document.querySelector("#secondary-inner");
+  }
+  if (!secondary) {
+    console.log(
+      "Productive YouTube: #secondary-inner not found, trying #related..."
+    );
+    secondary = document.querySelector("#related");
+  }
+  if (!secondary) {
+    console.log(
+      "Productive YouTube: No sidebar found, creating fixed position container..."
+    );
+    // Create a fixed position wrapper
+    const fixedWrapper = document.createElement("div");
+    fixedWrapper.id = "transcript-fixed-wrapper";
+    fixedWrapper.style.cssText = `
+      position: fixed !important;
+      top: 80px !important;
+      right: 20px !important;
+      width: 400px !important;
+      max-height: calc(100vh - 100px) !important;
+      overflow-y: auto !important;
+      z-index: 9999 !important;
+    `;
+    document.body.appendChild(fixedWrapper);
+    secondary = fixedWrapper;
+    console.log("Productive YouTube: Created fixed position wrapper");
+  }
+
+  if (!secondary) {
+    console.error(
+      "Productive YouTube: Could not find any suitable container for transcript - giving up"
+    );
     return;
   }
 
+  console.log(
+    "Productive YouTube: Using container:",
+    secondary.tagName || secondary.id || "unknown"
+  );
+
   // Group transcript entries into chunks
-  // CHUNK_SIZE can be adjusted for experimentation (currently 30 seconds)
-  const CHUNK_SIZE = 5; // seconds
+  const CHUNK_SIZE = 25; // seconds
   const chunkedTranscript: { start: number; text: string }[] = [];
   let currentChunk: { start: number; text: string } | null = null;
-  
-  transcript.forEach(line => {
+
+  transcript.forEach((line) => {
     // Decode HTML entities in the text
     const decodedText = decodeHtmlEntities(line.text);
     const chunkStart = Math.floor(line.start / CHUNK_SIZE) * CHUNK_SIZE; // Round down to nearest chunk
-    
+
     if (!currentChunk || currentChunk.start !== chunkStart) {
       // Start a new chunk
       if (currentChunk) {
@@ -742,14 +943,14 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
       }
       currentChunk = {
         start: chunkStart,
-        text: decodedText
+        text: decodedText,
       };
     } else {
       // Add to current chunk
       currentChunk.text += " " + decodedText;
     }
   });
-  
+
   // Don't forget the last chunk
   if (currentChunk) {
     chunkedTranscript.push(currentChunk);
@@ -757,20 +958,33 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
 
   let container = document.getElementById("transcript-container");
   if (container) {
+    console.log("Productive YouTube: Reusing existing transcript container");
     container.innerHTML = "";
   } else {
+    console.log("Productive YouTube: Creating new transcript container");
     container = document.createElement("div");
     container.id = "transcript-container";
     container.className = "transcript-container";
-    // Add inline styles for proper appearance
+    // Add inline styles with !important flags to ensure visibility
     container.style.cssText = `
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 0.5rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      background: #fff !important;
+      border: 1px solid #e5e7eb !important;
+      border-radius: 0.5rem !important;
+      margin-bottom: 1rem !important;
+      margin-top: 1rem !important;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+      width: 100% !important;
+      max-width: 400px !important;
+      z-index: 1000 !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
     `;
     secondary.prepend(container);
+    console.log(
+      "Productive YouTube: Transcript container created and inserted into DOM"
+    );
   }
 
   const header = document.createElement("div");
@@ -792,11 +1006,12 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
   title.textContent = "Video Transcript";
   // Add inline styles for title
   title.style.cssText = `
-    font-size: 1.125rem;
+    font-size: 1.5rem;
     font-weight: 600;
     color: #1f2937;
     display: flex;
     align-items: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   `;
   header.appendChild(title);
 
@@ -806,6 +1021,7 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
   arrowSpan.style.cssText = `
     margin-left: 0.5rem;
     color: #9ca3af;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   `;
   arrowSpan.textContent = "▲";
   title.appendChild(arrowSpan);
@@ -815,24 +1031,28 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
   copyButton.textContent = "Copy Text";
   // Add inline styles for copy button
   copyButton.style.cssText = `
-    background-color: #e5e7eb;
-    color: #1f2937;
+    background-color:#2986cc;
+    color: #eef3fa;
     padding: 0.25rem 0.75rem;
     border-radius: 0.375rem;
-    font-size: 0.875rem;
+    font-size: 1.5rem;
     font-weight: 500;
     transition: background-color 0.2s;
     border: none;
     cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   `;
   copyButton.onmouseover = () => {
-    copyButton.style.backgroundColor = "#d1d5db";
+    copyButton.style.backgroundColor = "#008df7";
   };
   copyButton.onmouseout = () => {
-    copyButton.style.backgroundColor = "#e5e7eb";
+    copyButton.style.backgroundColor = "#2986cc";
   };
-  copyButton.onclick = () => {
-    const transcriptText = chunkedTranscript.map((chunk) => `[${formatTimestamp(chunk.start)}] ${chunk.text}`).join(" \n\n");
+  copyButton.onclick = (e) => {
+    e.stopPropagation(); // Prevent header click event from triggering
+    const transcriptText = chunkedTranscript
+      .map((chunk) => `[${formatTimestamp(chunk.start)}] ${chunk.text}`)
+      .join(" \n\n");
     navigator.clipboard.writeText(transcriptText);
     copyButton.textContent = "Copied!";
     setTimeout(() => {
@@ -849,12 +1069,13 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
     overflow-y: auto;
     padding: 1rem;
     background-color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   `;
   container.appendChild(content);
 
   header.onclick = () => {
     content.style.display = content.style.display === "none" ? "block" : "none";
-    const arrow = header.querySelector('.transcript-arrow');
+    const arrow = header.querySelector(".transcript-arrow");
     if (arrow) {
       arrow.textContent = content.style.display === "none" ? "▼" : "▲";
     }
@@ -871,17 +1092,18 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
       border-radius: 0.5rem;
       transition: background-color 0.2s;
     `;
-    
-    lineEl.onmouseover = function() {
+
+    lineEl.onmouseover = function () {
       // Check if dark mode is active
-      const isDarkMode = document.documentElement.classList.contains('dark') || 
-        document.querySelector('html')?.getAttribute('dark') !== null ||
-        document.body.style.backgroundColor === 'rgb(19, 19, 19)' ||
-        document.body.style.backgroundColor === '#131313';
-      
+      const isDarkMode =
+        document.documentElement.classList.contains("dark") ||
+        document.querySelector("html")?.getAttribute("dark") !== null ||
+        document.body.style.backgroundColor === "rgb(19, 19, 19)" ||
+        document.body.style.backgroundColor === "#131313";
+
       lineEl.style.backgroundColor = isDarkMode ? "#374151" : "#f3f4f6";
     };
-    lineEl.onmouseout = function() {
+    lineEl.onmouseout = function () {
       lineEl.style.backgroundColor = "transparent";
     };
 
@@ -895,8 +1117,9 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
       cursor: pointer;
       margin-right: 0.75rem;
       display: inline-block;
-      min-width: 45px;
-      font-size: 0.875rem;
+      min-width: 50px;
+      font-size: 1.5rem;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
     `;
     timestampEl.onclick = () => {
       const video = document.querySelector("video");
@@ -908,11 +1131,14 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
     const textEl = document.createElement("span");
     textEl.className = "transcript-text";
     textEl.textContent = chunk.text;
-    // Add inline styles for text
+    // Add inline styles for text with professional font
     textEl.style.cssText = `
-      color: #1f2937;
-      font-size: 1rem;
-      line-height: 1.625;
+      color: #374151;
+      font-size: 1.5rem;
+      line-height: 1.7;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-weight: 400;
+      letter-spacing: 0.01em;
     `;
 
     lineEl.appendChild(timestampEl);
@@ -921,7 +1147,7 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
   });
 
   // Add dark mode support
-  const applyDarkModeStyles = (element: HTMLElement, isDarkMode: boolean) => {
+  const applyDarkModeStyles = (isDarkMode: boolean) => {
     if (isDarkMode) {
       // Dark mode styles
       container.style.cssText = `
@@ -941,7 +1167,7 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
         background-color: #111827;
       `;
       title.style.cssText = `
-        font-size: 1.125rem;
+        font-size: 1.5rem;
         font-weight: 600;
         color: #f9fafb;
         display: flex;
@@ -952,42 +1178,52 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
         color: #9ca3af;
       `;
       copyButton.style.cssText = `
-        background-color: #374151;
-        color: #f9fafb;
+        background-color: #4a5f7d;
+        color: #ffffff;
         padding: 0.25rem 0.75rem;
         border-radius: 0.375rem;
-        font-size: 0.875rem;
+        font-size: 1.5rem;
         font-weight: 500;
         transition: background-color 0.2s;
         border: none;
         cursor: pointer;
       `;
+      copyButton.onmouseover = () => {
+        copyButton.style.backgroundColor = "#13334c";
+      };
+      copyButton.onmouseout = () => {
+        copyButton.style.backgroundColor = "#4a5f7d";
+      };
       content.style.cssText = `
         max-height: 24rem;
         overflow-y: auto;
         padding: 1rem;
         background-color: #1f2937;
       `;
-      
+
       // Update text elements for dark mode
-      const timestamps = content.querySelectorAll('.transcript-timestamp');
-      timestamps.forEach(ts => {
+      const timestamps = content.querySelectorAll(".transcript-timestamp");
+      timestamps.forEach((ts) => {
         (ts as HTMLElement).style.cssText = `
           color: #60a5fa;
           font-weight: 600;
           cursor: pointer;
           margin-right: 0.75rem;
           display: inline-block;
-          min-width: 45px;
-          font-size: 0.875rem;
+          min-width: 50px;
+          font-size: 1.5rem;
+          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
         `;
       });
-      const texts = content.querySelectorAll('.transcript-text');
-      texts.forEach(t => {
+      const texts = content.querySelectorAll(".transcript-text");
+      texts.forEach((t) => {
         (t as HTMLElement).style.cssText = `
-          color: #e5e7eb;
-          font-size: 1rem;
-          line-height: 1.625;
+          color: #d1d5db;
+          font-size: 1.5rem;
+          line-height: 1.7;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          font-weight: 400;
+          letter-spacing: 0.01em;
         `;
       });
     } else {
@@ -1009,7 +1245,7 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
         background-color: #f9fafb;
       `;
       title.style.cssText = `
-        font-size: 1.125rem;
+        font-size: 1.5rem;
         font-weight: 600;
         color: #1f2937;
         display: flex;
@@ -1020,62 +1256,79 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
         color: #9ca3af;
       `;
       copyButton.style.cssText = `
-        background-color: #e5e7eb;
+        background-color: #d3d6da;
         color: #1f2937;
         padding: 0.25rem 0.75rem;
         border-radius: 0.375rem;
-        font-size: 0.875rem;
+        font-size: 1.5rem;
         font-weight: 500;
         transition: background-color 0.2s;
         border: none;
         cursor: pointer;
       `;
+      copyButton.onmouseover = () => {
+        copyButton.style.backgroundColor = "#fff";
+        copyButton.style.border = "1px solid #575757";
+      };
+      copyButton.onmouseout = () => {
+        copyButton.style.backgroundColor = "#d3d6da";
+        copyButton.style.border = "none";
+      };
       content.style.cssText = `
         max-height: 24rem;
         overflow-y: auto;
         padding: 1rem;
         background-color: #fff;
       `;
-      
+
       // Update text elements for light mode
-      const timestamps = content.querySelectorAll('.transcript-timestamp');
-      timestamps.forEach(ts => {
+      const timestamps = content.querySelectorAll(".transcript-timestamp");
+      timestamps.forEach((ts) => {
         (ts as HTMLElement).style.cssText = `
           color: #2563eb;
           font-weight: 600;
           cursor: pointer;
           margin-right: 0.75rem;
           display: inline-block;
-          min-width: 45px;
-          font-size: 0.875rem;
+          min-width: 50px;
+          font-size: 1.5rem;
+          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
         `;
       });
-      const texts = content.querySelectorAll('.transcript-text');
-      texts.forEach(t => {
+      const texts = content.querySelectorAll(".transcript-text");
+      texts.forEach((t) => {
         (t as HTMLElement).style.cssText = `
-          color: #1f2937;
-          font-size: 1rem;
-          line-height: 1.625;
+          color: #374151;
+          font-size: 1.5rem;
+          line-height: 1.7;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          font-weight: 400;
+          letter-spacing: 0.01em;
         `;
       });
     }
   };
 
   const isDarkMode = () => {
-    return document.documentElement.classList.contains('dark') || 
-      document.querySelector('html')?.getAttribute('dark') !== null ||
-      document.body.style.backgroundColor === 'rgb(19, 19, 19)' ||
-      document.body.style.backgroundColor === '#131313';
+    return (
+      document.documentElement.classList.contains("dark") ||
+      document.querySelector("html")?.getAttribute("dark") !== null ||
+      document.body.style.backgroundColor === "rgb(19, 19, 19)" ||
+      document.body.style.backgroundColor === "#131313"
+    );
   };
 
   // Apply dark mode initially
-  applyDarkModeStyles(container, isDarkMode());
-  
+  applyDarkModeStyles(isDarkMode());
+
   // Watch for dark mode changes
   const observer = new MutationObserver(() => {
-    applyDarkModeStyles(container, isDarkMode());
+    applyDarkModeStyles(isDarkMode());
   });
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
   observer.observe(document.body, { attributes: true });
 
   const video = document.querySelector("video");
@@ -1096,7 +1349,7 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
             padding: 0.75rem;
             border-radius: 0.5rem;
             transition: background-color 0.2s;
-            background-color: ${isCurrentlyDarkMode ? '#1e3a8a' : '#dbeafe'};
+            background-color: ${isCurrentlyDarkMode ? "#1e3a8a" : "#dbeafe"};
             border-left: 4px solid #3b82f6;
           `;
         } else {
@@ -1109,10 +1362,12 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
             border-radius: 0.5rem;
             transition: background-color 0.2s;
           `;
-          lineEl.onmouseover = function() {
-            lineEl.style.backgroundColor = isCurrentlyDarkMode ? "#374151" : "#f3f4f6";
+          lineEl.onmouseover = function () {
+            lineEl.style.backgroundColor = isCurrentlyDarkMode
+              ? "#374151"
+              : "#f3f4f6";
           };
-          lineEl.onmouseout = function() {
+          lineEl.onmouseout = function () {
             lineEl.style.backgroundColor = "transparent";
           };
         }
@@ -1124,15 +1379,17 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
 function formatTimestamp(seconds: number) {
   const date = new Date(0);
   date.setSeconds(seconds);
-  
+
   // Get total minutes to determine format
   const totalMinutes = Math.floor(seconds / 60);
-  
+
   if (totalMinutes < 60) {
     // Less than 1 hour - use MM:SS format
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
   } else {
     // 1 hour or more - use HH:MM:SS format
     return date.toISOString().substr(11, 8);
@@ -1140,41 +1397,116 @@ function formatTimestamp(seconds: number) {
 }
 
 async function showVideoTranscript() {
+  console.log(
+    "Productive YouTube: showVideoTranscript called, showTranscript setting:",
+    settings.showTranscript
+  );
+
   if (!settings.showTranscript) {
     const existingContainer = document.getElementById("transcript-container");
     if (existingContainer) {
       existingContainer.remove();
+      console.log("Productive YouTube: Transcript container removed");
     }
     return;
   }
 
   try {
+    console.log("Productive YouTube: Starting transcript fetch process...");
+
     const videoId = getVideoId();
     if (!videoId) {
-      console.log("Could not get video ID");
+      console.warn("Productive YouTube: Could not get video ID");
+      return;
+    }
+    console.log("Productive YouTube: Video ID found:", videoId);
+
+    // Wait a bit for YouTube to load the player response, then try again
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // First, try to use the existing player response on the page
+    let playerApiResponse = null;
+
+    // @ts-ignore
+    if (window.ytInitialPlayerResponse) {
+      // @ts-ignore
+      playerApiResponse = window.ytInitialPlayerResponse;
+      console.log(
+        "Productive YouTube: Using ytInitialPlayerResponse from page"
+      );
+      // Debug: log the captions structure
+      if (playerApiResponse?.captions) {
+        const captionCount =
+          playerApiResponse.captions.playerCaptionsTracklistRenderer
+            ?.captionTracks?.length || 0;
+        console.log(
+          "Productive YouTube: Caption tracks available:",
+          captionCount
+        );
+      } else {
+        console.log(
+          "Productive YouTube: No captions object in player response"
+        );
+      }
+    } else {
+      console.log(
+        "Productive YouTube: ytInitialPlayerResponse not found on page, fetching from API"
+      );
+      try {
+        // If not available on page, fetch it
+        const videoPageHtml = await fetchVideoPage(videoId);
+        const apiKey = extractApiKey(videoPageHtml);
+        if (!apiKey) {
+          console.warn(
+            "Productive YouTube: Could not extract API key from video page"
+          );
+          return;
+        }
+
+        playerApiResponse = await fetchPlayerApi(videoId, apiKey);
+        console.log(
+          "Productive YouTube: Fetched player response from API successfully"
+        );
+      } catch (fetchError) {
+        console.error(
+          "Productive YouTube: Failed to fetch from API:",
+          fetchError
+        );
+        return;
+      }
+    }
+
+    if (!playerApiResponse) {
+      console.warn("Productive YouTube: No player API response received");
       return;
     }
 
-    const videoPageHtml = await fetchVideoPage(videoId);
-    const apiKey = extractApiKey(videoPageHtml);
-    if (!apiKey) {
-      console.log("Could not extract API key");
-      return;
-    }
-
-    const playerApiResponse = await fetchPlayerApi(videoId, apiKey);
+    console.log("Productive YouTube: Attempting to extract transcript URL...");
     const transcriptUrl = extractTranscriptUrl(playerApiResponse);
     if (!transcriptUrl) {
-      console.log("Could not extract transcript URL");
+      console.warn(
+        "Productive YouTube: Could not extract transcript URL - this video may not have captions available"
+      );
       return;
     }
 
+    console.log("Productive YouTube: Transcript URL found, fetching XML...");
     const transcriptXml = await fetchTranscriptXml(transcriptUrl);
     const transcript = parseTranscript(transcriptXml);
 
+    if (!transcript || transcript.length === 0) {
+      console.warn("Productive YouTube: No transcript content parsed");
+      return;
+    }
+
+    console.log(
+      "Productive YouTube: SUCCESS - Parsed transcript with",
+      transcript.length,
+      "entries, displaying..."
+    );
     displayTranscript(transcript);
   } catch (error) {
-    console.error("Error showing video transcript:", error);
+    console.error("Productive YouTube: Error showing video transcript:", error);
   }
 }
 

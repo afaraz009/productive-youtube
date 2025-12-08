@@ -4,7 +4,11 @@
   "version": "2.0.1",
   "description": "Transform YouTube into a productivity tool. Block Shorts, autoplay, suggestions, and more. Stay focused on what matters.",
   "permissions": ["storage"],
-  "host_permissions": ["*://*.youtube.com/*"],
+  "host_permissions": [
+    "*://*.youtube.com/*",
+    "https://www.youtube.com/youtubei/v1/player*",
+    "https://www.youtube.com/watch*"
+  ],
   "content_scripts": [
     {
       "matches": ["*://*.youtube.com/*"],

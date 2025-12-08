@@ -85,7 +85,7 @@ const PopupApp: React.FC = () => {
   };
 
   return (
-    <div className="w-96 max-h-[600px] overflow-y-auto font-sans text-sm bg-gradient-to-br from-slate-50 to-blue-50/30">
+    <div className="w-96 max-h-[600px] pb-5 overflow-y-auto font-sans text-sm bg-gradient-to-br from-slate-50 to-blue-50/30">
       <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-blue-700 border-b border-blue-800 px-4 py-3.5 shadow-md">
         <h1 className="text-sm font-bold text-white">Productive YouTube</h1>
         <p className="text-xs text-blue-100 mt-1">
