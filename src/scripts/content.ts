@@ -967,8 +967,10 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
     container.className = "transcript-container";
     // Add inline styles with !important flags to ensure visibility
     container.style.cssText = `
-      background: #fff !important;
-      border: 1px solid #e5e7eb !important;
+      background: rgba(255, 255, 255, 0.85) !important;
+      backdrop-filter: blur(10px) !important;
+      -webkit-backdrop-filter: blur(10px) !important;
+      border: 1px solid rgba(229, 231, 235, 0.5) !important;
       border-radius: 0.5rem !important;
       margin-bottom: 1rem !important;
       margin-top: 1rem !important;
@@ -995,9 +997,9 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
     align-items: center;
     justify-content: space-between;
     padding: 1rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid rgba(229, 231, 235, 0.5);
     cursor: pointer;
-    background-color: #f9fafb;
+    background-color: rgba(249, 250, 251, 0.5);
   `;
   container.appendChild(header);
 
@@ -1006,7 +1008,7 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
   title.textContent = "Video Transcript";
   // Add inline styles for title
   title.style.cssText = `
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-weight: 600;
     color: #1f2937;
     display: flex;
@@ -1035,7 +1037,7 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
     color: #eef3fa;
     padding: 0.25rem 0.75rem;
     border-radius: 0.375rem;
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-weight: 500;
     transition: background-color 0.2s;
     border: none;
@@ -1061,17 +1063,82 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
   };
   header.appendChild(copyButton);
 
+  // Create sync button
+  const syncButton = document.createElement("button");
+  syncButton.className = "transcript-sync-button";
+  syncButton.textContent = "⟳ Sync";
+  syncButton.title = "Scroll to current timestamp";
+  // Add inline styles for sync button
+  syncButton.style.cssText = `
+    background-color: #10b981;
+    color: #ffffff;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 2rem;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    border: none;
+    cursor: pointer;
+    margin-left: 0.5rem;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  `;
+  syncButton.onmouseover = () => {
+    syncButton.style.backgroundColor = "#059669";
+  };
+  syncButton.onmouseout = () => {
+    syncButton.style.backgroundColor = "#10b981";
+  };
+  header.appendChild(syncButton);
+
   const content = document.createElement("div");
   content.className = "transcript-content";
+  // Check if watch page suggestions are removed to extend height
+  const isFullHeight = settings.removeWatchPageSuggestions;
+  const maxHeight = isFullHeight ? "calc(100vh - 180px)" : "24rem";
+
   // Add inline styles for content
   content.style.cssText = `
-    max-height: 24rem;
+    max-height: ${maxHeight};
     overflow-y: auto;
     padding: 1rem;
-    background-color: #fff;
+    background-color: transparent;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   `;
   container.appendChild(content);
+
+  // Add sync button click handler
+  syncButton.onclick = (e) => {
+    e.stopPropagation(); // Prevent header click event from triggering
+    const video = document.querySelector("video");
+    if (video) {
+      const currentTime = video.currentTime;
+      const activeLine = content.querySelector(
+        ".transcript-line.active"
+      ) as HTMLElement;
+      if (activeLine) {
+        activeLine.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else {
+        // If no active line, find the closest one
+        const lines = content.querySelectorAll(".transcript-line");
+        let closestLine: HTMLElement | null = null;
+        let minDiff = Infinity;
+
+        lines.forEach((line) => {
+          const lineEl = line as HTMLElement;
+          const start = parseFloat(lineEl.dataset.start || "0");
+          const diff = Math.abs(currentTime - start);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestLine = lineEl;
+          }
+        });
+
+        if (closestLine) {
+          closestLine.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }
+    }
+  };
 
   header.onclick = () => {
     content.style.display = content.style.display === "none" ? "block" : "none";
@@ -1118,7 +1185,7 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
       margin-right: 0.75rem;
       display: inline-block;
       min-width: 50px;
-      font-size: 1.5rem;
+      font-size: 2rem;
       font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
     `;
     timestampEl.onclick = () => {
@@ -1133,8 +1200,8 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
     textEl.textContent = chunk.text;
     // Add inline styles for text with professional font
     textEl.style.cssText = `
-      color: #374151;
-      font-size: 1.5rem;
+      color: #1f2937;
+      font-size: 2rem;
       line-height: 1.7;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       font-weight: 400;
@@ -1151,8 +1218,10 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
     if (isDarkMode) {
       // Dark mode styles
       container.style.cssText = `
-        background: #1f2937;
-        border: 1px solid #374151;
+        background: rgba(31, 41, 55, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(55, 65, 81, 0.5);
         border-radius: 0.5rem;
         margin-bottom: 1rem;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -1162,12 +1231,12 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
         align-items: center;
         justify-content: space-between;
         padding: 1rem;
-        border-bottom: 1px solid #374151;
+        border-bottom: 1px solid rgba(55, 65, 81, 0.5);
         cursor: pointer;
-        background-color: #111827;
+        background-color: rgba(17, 24, 39, 0.5);
       `;
       title.style.cssText = `
-        font-size: 1.5rem;
+        font-size: 2rem;
         font-weight: 600;
         color: #f9fafb;
         display: flex;
@@ -1182,7 +1251,7 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
         color: #ffffff;
         padding: 0.25rem 0.75rem;
         border-radius: 0.375rem;
-        font-size: 1.5rem;
+        font-size: 2rem;
         font-weight: 500;
         transition: background-color 0.2s;
         border: none;
@@ -1195,10 +1264,10 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
         copyButton.style.backgroundColor = "#4a5f7d";
       };
       content.style.cssText = `
-        max-height: 24rem;
+        max-height: ${maxHeight};
         overflow-y: auto;
         padding: 1rem;
-        background-color: #1f2937;
+        background-color: transparent;
       `;
 
       // Update text elements for dark mode
@@ -1211,15 +1280,15 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
           margin-right: 0.75rem;
           display: inline-block;
           min-width: 50px;
-          font-size: 1.5rem;
+          font-size: 2rem;
           font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
         `;
       });
       const texts = content.querySelectorAll(".transcript-text");
       texts.forEach((t) => {
         (t as HTMLElement).style.cssText = `
-          color: #d1d5db;
-          font-size: 1.5rem;
+          color: #e5e7eb;
+          font-size: 2rem;
           line-height: 1.7;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
           font-weight: 400;
@@ -1229,8 +1298,10 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
     } else {
       // Light mode styles
       container.style.cssText = `
-        background: #fff;
-        border: 1px solid #e5e7eb;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(229, 231, 235, 0.5);
         border-radius: 0.5rem;
         margin-bottom: 1rem;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -1240,12 +1311,12 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
         align-items: center;
         justify-content: space-between;
         padding: 1rem;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid rgba(229, 231, 235, 0.5);
         cursor: pointer;
-        background-color: #f9fafb;
+        background-color: rgba(249, 250, 251, 0.5);
       `;
       title.style.cssText = `
-        font-size: 1.5rem;
+        font-size: 2rem;
         font-weight: 600;
         color: #1f2937;
         display: flex;
@@ -1260,7 +1331,7 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
         color: #1f2937;
         padding: 0.25rem 0.75rem;
         border-radius: 0.375rem;
-        font-size: 1.5rem;
+        font-size: 2rem;
         font-weight: 500;
         transition: background-color 0.2s;
         border: none;
@@ -1275,10 +1346,10 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
         copyButton.style.border = "none";
       };
       content.style.cssText = `
-        max-height: 24rem;
+        max-height: ${maxHeight};
         overflow-y: auto;
         padding: 1rem;
-        background-color: #fff;
+        background-color: transparent;
       `;
 
       // Update text elements for light mode
@@ -1291,15 +1362,15 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
           margin-right: 0.75rem;
           display: inline-block;
           min-width: 50px;
-          font-size: 1.5rem;
+          font-size: 2rem;
           font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
         `;
       });
       const texts = content.querySelectorAll(".transcript-text");
       texts.forEach((t) => {
         (t as HTMLElement).style.cssText = `
-          color: #374151;
-          font-size: 1.5rem;
+          color: #1f2937;
+          font-size: 2rem;
           line-height: 1.7;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
           font-weight: 400;
