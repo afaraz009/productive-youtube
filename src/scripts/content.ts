@@ -1255,7 +1255,12 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
         ".transcript-line.active"
       ) as HTMLElement;
       if (activeLine) {
-        activeLine.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Scroll within the transcript container only, not the whole page
+        const lineTop = activeLine.offsetTop;
+        const containerHeight = content.clientHeight;
+        const lineHeight = activeLine.clientHeight;
+        const scrollPosition = lineTop - containerHeight / 2 + lineHeight / 2;
+        content.scrollTo({ top: scrollPosition, behavior: "smooth" });
       } else {
         // If no active line, find the closest one
         const lines = content.querySelectorAll(".transcript-line");
@@ -1273,7 +1278,11 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
         });
 
         if (closestLine) {
-          closestLine.scrollIntoView({ behavior: "smooth", block: "center" });
+          const lineTop = closestLine.offsetTop;
+          const containerHeight = content.clientHeight;
+          const lineHeight = closestLine.clientHeight;
+          const scrollPosition = lineTop - containerHeight / 2 + lineHeight / 2;
+          content.scrollTo({ top: scrollPosition, behavior: "smooth" });
         }
       }
     }
@@ -1666,7 +1675,13 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
 
           // Auto-scroll to active line if user is not manually scrolling
           if (!isUserScrolling) {
-            lineEl.scrollIntoView({ behavior: "smooth", block: "center" });
+            // Scroll within the transcript container only, not the whole page
+            const lineTop = lineEl.offsetTop;
+            const containerHeight = content.clientHeight;
+            const lineHeight = lineEl.clientHeight;
+            const scrollPosition =
+              lineTop - containerHeight / 2 + lineHeight / 2;
+            content.scrollTo({ top: scrollPosition, behavior: "smooth" });
           }
         } else {
           lineEl.classList.remove("active");
