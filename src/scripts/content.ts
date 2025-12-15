@@ -932,7 +932,7 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
       top: 80px !important;
       right: 20px !important;
       width: 400px !important;
-      max-height: calc(100vh - 100px) !important;
+      max-height: calc(100vh - 150px) !important;
       overflow-y: auto !important;
       z-index: 9999 !important;
     `;
@@ -1066,7 +1066,7 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
   // Add inline styles for title
   title.style.cssText = `
     font-size: 16px;
-    line-height: 0.5em;
+    line-height: 1.5em;
     font-weight: 700;
     color: #1f2937;
     display: flex;
@@ -1295,9 +1295,8 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
       color: #2563eb;
       font-weight: 700;
       cursor: pointer;
-          font-size: 16px;
-
-      line-height: 0.5em;
+      font-size: 14px;
+      line-height: 1.4em;
       font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
       margin-bottom: 0.75rem;
       margin-top: 1.25rem;
@@ -1335,10 +1334,11 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
       lineEl.dataset.duration = lineData.duration.toString();
       // Add inline styles for transcript line
       lineEl.style.cssText = `
-        margin-bottom: 0.5rem;
-        padding: 0.5rem 0.75rem;
+        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
         border-radius: 0.5rem;
         transition: all 0.3s ease;
+        line-height: 1.6em;
       `;
 
       lineEl.onmouseover = function () {
@@ -1366,13 +1366,15 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
       textEl.textContent = lineData.text;
       textEl.style.cssText = `
         color: #1f2937;
-        font-size: 16px;
-        line-height: 0.5em;
+        font-size: 15px;
+        line-height: 1.6;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         transition: color 0.3s ease;
         cursor: pointer;
-        letter-spacing: -0.005em;
+        letter-spacing: 0.01em;
         user-select: text;
+        display: block;
+        word-wrap: break-word;
       `;
       // No click handler here - text clicks will be handled by initializeTranscriptSelection
 
@@ -1407,7 +1409,7 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
         `;
       title.style.cssText = `
        font-size: 16px;
-        line-height: 0.5em;
+        line-height: 1.5em;
         font-weight: 700;
         color: #f0f9ff;
         display: flex;
@@ -1470,11 +1472,13 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
       texts.forEach((t) => {
         (t as HTMLElement).style.cssText = `
           color: #e5e7eb;
-          font-size: 16px;
-          line-height: 0.5em;
+          font-size: 15px;
+          line-height: 1.6;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
           font-weight: 400;
           letter-spacing: 0.01em;
+          display: block;
+          word-wrap: break-word;
         `;
       });
     } else {
@@ -1501,7 +1505,7 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
       `;
       title.style.cssText = `
         font-size: 16px;
-        line-height: 0.5em;
+        line-height: 1.5em;
         font-weight: 700;
         color: #1f2937;
         display: flex;
@@ -1563,11 +1567,13 @@ function displayTranscript(transcript: { text: string; start: number }[]) {
       texts.forEach((t) => {
         (t as HTMLElement).style.cssText = `
           color: #1f2937;
-          font-size: 16px;
-          line-height: 0.5em;
+          font-size: 15px;
+          line-height: 1.6;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
           font-weight: 400;
           letter-spacing: 0.01em;
+          display: block;
+          word-wrap: break-word;
         `;
       });
     }
@@ -2159,7 +2165,7 @@ function createTranslationPopup(): HTMLDivElement {
       ">×</button>
     </div>
     
-    <div id="translation-content" style="line-height: 0.5em;">
+    <div id="translation-content" style="line-height: 1.5;">
       <div id="translation-loading" style="text-align: center; padding: 20px;">
         <div style="
           border-radius: 50%;
@@ -2219,7 +2225,7 @@ function createTranslationPopup(): HTMLDivElement {
             padding: 10px 12px;
             border-radius: 6px;
             font-size: 13px;
-            line-height: 0.5em;
+            line-height: 1.5;
             word-wrap: break-word;
           "></div>
         </div>
