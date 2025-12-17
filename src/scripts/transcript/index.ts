@@ -10,6 +10,9 @@ import {
 import { parseTranscript } from "./parser";
 import { displayTranscript } from "./display";
 
+// Track the current video ID to detect video changes
+let currentVideoId: string | null = null;
+
 export async function showVideoTranscript(): Promise<void> {
   console.log(
     "Productive YouTube: showVideoTranscript called, showTranscript setting:",
@@ -22,6 +25,7 @@ export async function showVideoTranscript(): Promise<void> {
       existingContainer.remove();
       console.log("Productive YouTube: Transcript container removed");
     }
+    currentVideoId = null; // Reset video ID tracking when transcript is disabled
     return;
   }
 
@@ -34,6 +38,23 @@ export async function showVideoTranscript(): Promise<void> {
       return;
     }
     console.log("Productive YouTube: Video ID found:", videoId);
+
+    // Check if video has changed - if so, remove old transcript
+    if (currentVideoId !== videoId) {
+      console.log(
+        "Productive YouTube: Video changed from",
+        currentVideoId,
+        "to",
+        videoId,
+        "- clearing old transcript"
+      );
+      const existingContainer = document.getElementById("transcript-container");
+      if (existingContainer) {
+        existingContainer.remove();
+        console.log("Productive YouTube: Old transcript container removed");
+      }
+      currentVideoId = videoId;
+    }
 
     // Wait a bit for YouTube to load the player response, then try again
     await new Promise((resolve) => setTimeout(resolve, 1000));
