@@ -1,16 +1,17 @@
-# Gemini Reference: YouTube Shorts & Video Suggestions Remover
+# Claude/Gemini Reference: YouTube Shorts & Video Suggestions Remover
 
 This document is a reference for Claude and Gemini, to understand and work with this codebase.
 
 ## 1. Project Overview
 
-This is a Chrome browser extension that removes YouTube Shorts, homepage videos, and video suggestions from YouTube. It's built with React, TypeScript, and Tailwind CSS.
+This is a Chrome browser extension that removes YouTube Shorts, homepage videos, and video suggestions from YouTube. It also provides video transcripts with AI translation features. Built with React, TypeScript, and Tailwind CSS using a modular architecture.
 
 ## 2. Tech Stack
 
 -   **Frontend**: React 18, TypeScript, Tailwind CSS
 -   **Build Tool**: Vite
 -   **Platform**: Chrome Extension (Manifest V3)
+-   **Architecture**: Modular ES6 modules
 
 ## 3. Project Structure
 
@@ -18,51 +19,232 @@ This is a Chrome browser extension that removes YouTube Shorts, homepage videos,
 /
 ├── src/
 │   ├── components/
-│   │   └── PopupApp.tsx      # Main popup React component
+│   │   └── PopupApp.tsx           # Main popup React component
 │   ├── scripts/
-│   │   └── content.ts        # Core logic to remove YouTube elements
-│   ├── popup.html            # Popup entry point
-│   └── popup.tsx             # React entry point for popup
+│   │   ├── content.ts             # Main orchestrator (115 lines)
+│   │   ├── types.ts               # TypeScript interfaces
+│   │   ├── selectors.ts           # DOM selector constants
+│   │   ├── settings.ts            # Settings management
+│   │   ├── removers/              # Content removal modules
+│   │   │   ├── shorts.ts          # Remove YouTube Shorts
+│   │   │   ├── homepage.ts        # Remove homepage videos
+│   │   │   ├── suggestions.ts     # Remove video suggestions
+│   │   │   └── shortsButton.ts    # Remove Shorts sidebar button
+│   │   ├── transcript/            # Transcript feature modules
+│   │   │   ├── index.ts           # Main transcript coordinator
+│   │   │   ├── api.ts             # YouTube API calls
+│   │   │   ├── parser.ts          # XML parsing
+│   │   │   ├── display.ts         # UI rendering
+│   │   │   └── utils.ts           # Helper functions
+│   │   └── translation/           # AI translation modules
+│   │       ├── index.ts           # Translation coordinator
+│   │       ├── api.ts             # Translation API
+│   │       ├── popup.ts           # Translation popup UI
+│   │       └── theme.ts           # Theme detection/management
+│   ├── popup.html                 # Popup entry point
+│   └── popup.tsx                  # React entry point for popup
 ├── public/
-│   └── manifest.json         # Chrome extension manifest
-├── dist/                     # Build output
-├── package.json              # Dependencies and scripts
-└── vite.config.ts            # Vite configuration
+│   └── manifest.json              # Chrome extension manifest
+├── dist/                          # Build output
+├── package.json                   # Dependencies and scripts
+├── vite.config.ts                 # Vite configuration
+├── REFACTORING_SUMMARY.md         # Detailed refactoring guide
+└── MODULE_STRUCTURE.md            # Visual module structure
 ```
 
-## 4. Key Files
+## 4. Key Files & Modules
 
--   `src/scripts/content.ts`: This is the most important file. It contains the core logic for removing elements from YouTube pages. It uses a `MutationObserver` to watch for DOM changes and removes elements based on a set of selectors.
--   `src/components/PopupApp.tsx`: This is the main React component for the extension's popup. It allows users to toggle the different features on and off.
--   `public/manifest.json`: This file defines the extension's permissions, content scripts, and other settings.
--   `vite.config.ts`: This file configures the Vite build process.
--   `package.json`: This file lists the project's dependencies and defines the build scripts.
+### Core Files
+
+-   **`src/scripts/content.ts`**: Main orchestrator that coordinates all features. Very lightweight (115 lines), imports and uses all modules below.
+-   **`src/scripts/types.ts`**: TypeScript interfaces (`Settings`, `VideoInfo`, `TranslationResponse`).
+-   **`src/scripts/selectors.ts`**: All DOM selector constants organized by feature.
+-   **`src/scripts/settings.ts`**: Settings management with Chrome storage integration.
+
+### Removers Module (`src/scripts/removers/`)
+
+Each remover handles a specific content blocking feature:
+
+-   **`shorts.ts`**: Removes YouTube Shorts from feed, includes restore functionality.
+-   **`homepage.ts`**: Removes suggested videos from homepage.
+-   **`suggestions.ts`**: Removes video suggestions on watch page (preserves playlists).
+-   **`shortsButton.ts`**: Removes Shorts button from sidebar.
+
+### Transcript Module (`src/scripts/transcript/`)
+
+Handles video transcript fetching and display:
+
+-   **`index.ts`**: Main coordinator for transcript feature.
+-   **`api.ts`**: Fetches video page, extracts API key, calls YouTube Player API.
+-   **`parser.ts`**: Parses transcript XML into structured data.
+-   **`display.ts`**: Creates and manages transcript UI with copy/sync features.
+-   **`utils.ts`**: Helper functions (getVideoId, formatTimestamp, page detection).
+
+### Translation Module (`src/scripts/translation/`)
+
+AI-powered translation feature:
+
+-   **`index.ts`**: Translation coordinator, re-exports all functions.
+-   **`api.ts`**: Calls translation API via background worker with caching.
+-   **`popup.ts`**: Creates translation popup UI and handles text selection.
+-   **`theme.ts`**: Detects and applies dark/light mode to popup.
+
+### UI Components
+
+-   **`src/components/PopupApp.tsx`**: React component for extension popup with toggle switches.
+
+### Configuration
+
+-   **`public/manifest.json`**: Extension permissions, content scripts, service worker.
+-   **`vite.config.ts`**: Vite build configuration (bundles modules into single content_script.js).
 
 ## 5. Development Workflow
 
 -   **Install dependencies**: `npm install`
--   **Build for development**: `npm run watch` (This will watch for file changes and automatically rebuild the extension.)
+-   **Build for development**: `npm run watch` (Watches for file changes and auto-rebuilds)
 -   **Load the extension in Chrome**:
-    1.  Open `chrome://extensions`.
-    2.  Enable "Developer mode".
-    3.  Click "Load unpacked" and select the `dist` directory.
+    1.  Open `chrome://extensions`
+    2.  Enable "Developer mode"
+    3.  Click "Load unpacked" and select the `dist` directory
 -   **Create a production build**: `npm run build`
--   **Package for distribution**: `npm run package` (This will create a `extension.zip` file.)
+-   **Package for distribution**: `npm run package` (Creates `extension.zip` file)
 
-## 6. Core Logic (content.ts)
+## 6. Core Logic & Data Flow
 
-The `content.ts` script works as follows:
+### Initialization Flow
 
-1.  **Load Settings**: It loads the user's settings from `chrome.storage.local`.
-2.  **Identify Page Type**: It determines whether the current page is the homepage, a watch page, or another type of page.
-3.  **Remove Elements**: It removes Shorts, homepage videos, and video suggestions based on the user's settings and the page type.
-4.  **Observe DOM Changes**: It uses a `MutationObserver` to watch for changes to the DOM. When new nodes are added, it re-runs the removal logic.
-5.  **Listen for Settings Changes**: It listens for changes to the user's settings in `chrome.storage` and updates the page accordingly.
+```
+content.ts
+  └─► initializeFullExtension()
+       ├─► loadSettings() (from settings.ts)
+       ├─► applyAllRemovals()
+       │    ├─► removeShorts() (from removers/shorts.ts)
+       │    ├─► removeShortsButton() (from removers/shortsButton.ts)
+       │    ├─► isWatchPage() ? (from transcript/utils.ts)
+       │    │    ├─► removeVideoSuggestions() (from removers/suggestions.ts)
+       │    │    └─► showVideoTranscript() (from transcript/index.ts)
+       │    └─► isHomePage() ?
+       │         └─► removeHomepageVideos() (from removers/homepage.ts)
+       └─► MutationObserver setup (watches DOM changes)
+```
+
+### Transcript Feature Flow
+
+```
+showVideoTranscript()
+  ├─► getVideoId() (utils.ts)
+  ├─► fetchVideoPage() (api.ts)
+  ├─► extractApiKey() (api.ts)
+  ├─► fetchPlayerApi() (api.ts)
+  ├─► extractTranscriptUrl() (api.ts)
+  ├─► fetchTranscriptXml() (api.ts)
+  ├─► parseTranscript() (parser.ts)
+  ├─► displayTranscript() (display.ts)
+  └─► initializeTranscriptSelection() (translation/popup.ts)
+```
+
+### Translation Feature Flow
+
+```
+User selects text in transcript
+  ├─► initializeTranscriptSelection() (translation/popup.ts)
+  ├─► showTranslationPopup() (translation/popup.ts)
+  ├─► translateWithAI() (translation/api.ts)
+  │    ├─► Check cache
+  │    └─► chrome.runtime.sendMessage() to background worker
+  └─► Display results with theme support (theme.ts)
+```
 
 ## 7. How to Add a New Feature
 
-1.  **Update `Settings` interface** in `content.ts` and `PopupApp.tsx`.
-2.  **Update default settings** in `content.ts`.
-3.  **Add a new toggle switch** to `PopupApp.tsx`.
-4.  **Add a new handler function** in `PopupApp.tsx` to update the settings in `chrome.storage`.
-5.  **Implement the new feature's logic** in `content.ts`.
+### For a New Content Removal Feature
+
+1.  **Create a new remover module**: `src/scripts/removers/yourFeature.ts`
+    ```typescript
+    import { settings } from "../settings";
+    import { YOUR_SELECTORS } from "../selectors";
+
+    export function removeYourFeature(): void {
+      if (!settings.yourFeature) {
+        restoreYourFeature();
+        return;
+      }
+      // Implementation
+    }
+
+    export function throttledRemoveYourFeature(): void {
+      // Throttled version
+    }
+    ```
+
+2.  **Add selectors**: Update `src/scripts/selectors.ts`
+    ```typescript
+    export const YOUR_SELECTORS: string[] = [
+      "selector1",
+      "selector2",
+    ];
+    ```
+
+3.  **Update types**: Update `src/scripts/types.ts`
+    ```typescript
+    export interface Settings {
+      // ... existing settings
+      yourFeature: boolean;
+    }
+    ```
+
+4.  **Update settings**: Update `src/scripts/settings.ts`
+    ```typescript
+    const defaultSettings: Settings = {
+      // ... existing settings
+      yourFeature: true,
+    };
+    ```
+
+5.  **Import and use**: Update `src/scripts/content.ts`
+    ```typescript
+    import { removeYourFeature, throttledRemoveYourFeature } from "./removers/yourFeature";
+
+    function applyAllRemovals() {
+      removeYourFeature();
+      // ...
+    }
+    ```
+
+6.  **Add UI toggle**: Update `src/components/PopupApp.tsx`
+    ```typescript
+    // Add toggle switch for yourFeature
+    ```
+
+### For a New Utility Function
+
+1.  Add to appropriate module (`utils.ts`, `api.ts`, etc.) or create new module
+2.  Export the function
+3.  Import where needed
+
+### For a New UI Component
+
+1.  Create component in transcript/display.ts or translation/popup.ts
+2.  Follow existing UI patterns (dark mode support, inline styles)
+3.  Export and use in appropriate context
+
+## 8. Module Architecture Benefits
+
+-   **Maintainability**: Each module has a single responsibility (~50-150 lines each)
+-   **Testability**: Individual modules can be unit tested
+-   **Scalability**: Easy to add features without bloating files
+-   **Readability**: Clear imports show dependencies
+-   **Performance**: Vite bundles and tree-shakes for optimal output
+
+## 9. Important Notes
+
+-   **Settings Object**: The `settings` object from `settings.ts` is a mutable shared object. Use `Object.assign()` to update it, never reassign.
+-   **Build Output**: All modules are bundled into a single `content_script.js` (~37KB minified).
+-   **No Circular Dependencies**: The module structure prevents circular imports.
+-   **Throttling**: All DOM manipulation uses throttled functions to avoid performance issues.
+
+## 10. Documentation
+
+-   **REFACTORING_SUMMARY.md**: Detailed guide on the refactoring from monolithic to modular
+-   **MODULE_STRUCTURE.md**: Visual diagrams and dependency graphs
+-   **This file**: Quick reference for working with the codebase

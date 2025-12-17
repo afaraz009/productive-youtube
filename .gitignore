@@ -4,7 +4,7 @@ package-lock.json
 
 # Build output
 *.zip
-
+dist/
 # Environment files
 .env
 .env.local
