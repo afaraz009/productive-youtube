@@ -126,4 +126,3 @@ export async function showVideoTranscript(): Promise<void> {
 
 // Re-export utils for convenience
 export { getVideoId, isWatchPage, isHomePage } from "./utils";
-export { setTranscriptSelectionInitializer } from "./display";

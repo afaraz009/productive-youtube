@@ -13,10 +13,3 @@ export interface Settings {
   removeWatchPageSuggestions: boolean;
   showTranscript: boolean;
 }
-
-export interface TranslationResponse {
-  urduTranslation: string;
-  context: string;
-  vocabulary: string[];
-  bestWord: string;
-}

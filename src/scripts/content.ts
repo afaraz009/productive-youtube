@@ -13,13 +13,7 @@ import { removeVideoSuggestions, throttledRemoveVideoSuggestions } from "./remov
 import { removeShortsButton, throttledRemoveShortsButton } from "./removers/shortsButton";
 
 // Import transcript functionality
-import { showVideoTranscript, isWatchPage, isHomePage, setTranscriptSelectionInitializer } from "./transcript";
-
-// Import translation functionality
-import { initializeTranscriptSelection } from "./translation";
-
-// Initialize the translation feature for transcript
-setTranscriptSelectionInitializer(initializeTranscriptSelection);
+import { showVideoTranscript, isWatchPage, isHomePage } from "./transcript";
 
 // Extended initialization to handle all features
 function initializeFullExtension(): void {

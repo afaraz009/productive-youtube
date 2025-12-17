@@ -1,13 +1,6 @@
 import { settings } from "../settings";
 import { formatTimestamp, decodeHtmlEntities, cleanTranscriptText } from "./utils";
 
-// This will be initialized in the main content.ts
-let initializeTranscriptSelection: (() => void) | null = null;
-
-export function setTranscriptSelectionInitializer(fn: () => void): void {
-  initializeTranscriptSelection = fn;
-}
-
 export function displayTranscript(transcript: { text: string; start: number }[]): void {
   console.log(
     "Productive YouTube: displayTranscript function called with",
@@ -178,16 +171,6 @@ export function displayTranscript(transcript: { text: string; start: number }[])
   applyDarkModeStyles(isDarkMode(), container, header, content);
   setupDarkModeObserver(container, header, content);
   setupVideoTimeTracking(content);
-
-  // Initialize AI translation feature after transcript is displayed
-  setTimeout(() => {
-    if (initializeTranscriptSelection) {
-      initializeTranscriptSelection();
-      console.log(
-        "Productive YouTube: AI Translation feature initialized for transcript"
-      );
-    }
-  }, 500);
 }
 
 function createTranscriptHeader(): HTMLElement {
