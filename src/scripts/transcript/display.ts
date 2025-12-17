@@ -390,33 +390,35 @@ function createSyncButton(content: HTMLElement): HTMLElement {
     const video = document.querySelector("video");
     if (video) {
       const currentTime = video.currentTime;
-      const activeLine = content.querySelector(".transcript-line.active") as HTMLElement;
-      if (activeLine) {
-        const lineTop = activeLine.offsetTop;
+      const activeSegment = content.querySelector(".transcript-segment.active") as HTMLElement;
+      if (activeSegment) {
+        const segmentTop = activeSegment.getBoundingClientRect().top;
+        const contentTop = content.getBoundingClientRect().top;
+        const relativeTop = segmentTop - contentTop + content.scrollTop;
         const containerHeight = content.clientHeight;
-        const lineHeight = activeLine.clientHeight;
-        const scrollPosition = lineTop - containerHeight / 2 + lineHeight / 2;
+        const scrollPosition = relativeTop - containerHeight / 2;
         content.scrollTo({ top: scrollPosition, behavior: "smooth" });
       } else {
-        const lines = content.querySelectorAll(".transcript-line");
-        let closestLine: HTMLElement | null = null;
+        const segments = content.querySelectorAll(".transcript-segment");
+        let closestSegment: HTMLElement | null = null;
         let minDiff = Infinity;
 
-        lines.forEach((line) => {
-          const lineEl = line as HTMLElement;
-          const start = parseFloat(lineEl.dataset.start || "0");
+        segments.forEach((segment) => {
+          const segmentEl = segment as HTMLElement;
+          const start = parseFloat(segmentEl.dataset.start || "0");
           const diff = Math.abs(currentTime - start);
           if (diff < minDiff) {
             minDiff = diff;
-            closestLine = lineEl;
+            closestSegment = segmentEl;
           }
         });
 
-        if (closestLine) {
-          const lineTop = closestLine.offsetTop;
+        if (closestSegment) {
+          const segmentTop = closestSegment.getBoundingClientRect().top;
+          const contentTop = content.getBoundingClientRect().top;
+          const relativeTop = segmentTop - contentTop + content.scrollTop;
           const containerHeight = content.clientHeight;
-          const lineHeight = closestLine.clientHeight;
-          const scrollPosition = lineTop - containerHeight / 2 + lineHeight / 2;
+          const scrollPosition = relativeTop - containerHeight / 2;
           content.scrollTo({ top: scrollPosition, behavior: "smooth" });
         }
       }
@@ -441,10 +443,8 @@ function renderTranscriptChunks(chunkedTranscript: any[], content: HTMLElement):
     const chunkHeader = createChunkHeader(chunk);
     content.appendChild(chunkHeader);
 
-    chunk.lines.forEach((lineData: any) => {
-      const lineEl = createTranscriptLine(lineData);
-      content.appendChild(lineEl);
-    });
+    const chunkParagraph = createChunkParagraph(chunk);
+    content.appendChild(chunkParagraph);
   });
 }
 
@@ -483,6 +483,56 @@ function createChunkHeader(chunk: any): HTMLElement {
   };
 
   return chunkHeader;
+}
+
+function createChunkParagraph(chunk: any): HTMLElement {
+  const paragraphEl = document.createElement("div");
+  paragraphEl.className = "transcript-chunk-paragraph";
+
+  const isCurrentlyDarkMode = isDarkMode();
+  const textColor = isCurrentlyDarkMode ? "#e5e7eb" : "#1f2937";
+
+  paragraphEl.style.cssText = `
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    line-height: 1.8em;
+    font-size: 15px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: ${textColor};
+    text-align: justify;
+    transition: all 0.3s ease;
+  `;
+
+  // Create spans for each line in the chunk
+  chunk.lines.forEach((lineData: any, index: number) => {
+    const span = document.createElement("span");
+    span.className = "transcript-segment";
+    span.dataset.start = lineData.start.toString();
+    span.dataset.duration = lineData.duration.toString();
+    span.textContent = lineData.text;
+    span.style.cssText = `
+      color: ${textColor};
+      transition: all 0.2s ease;
+      cursor: pointer;
+    `;
+
+    span.onclick = () => {
+      const video = document.querySelector("video");
+      if (video) {
+        video.currentTime = lineData.start;
+      }
+    };
+
+    paragraphEl.appendChild(span);
+
+    // Add space between segments (but not after the last one)
+    if (index < chunk.lines.length - 1) {
+      paragraphEl.appendChild(document.createTextNode(" "));
+    }
+  });
+
+  return paragraphEl;
 }
 
 function createTranscriptLine(lineData: any): HTMLElement {
@@ -588,7 +638,24 @@ function setupDarkModeObserver(
   content: HTMLElement
 ): void {
   const observer = new MutationObserver(() => {
-    applyDarkModeStyles(isDarkMode(), container, header, content);
+    const currentDarkMode = isDarkMode();
+    applyDarkModeStyles(currentDarkMode, container, header, content);
+
+    // Update paragraph and segment colors
+    const textColor = currentDarkMode ? "#e5e7eb" : "#1f2937";
+    const paragraphs = content.querySelectorAll(".transcript-chunk-paragraph");
+    paragraphs.forEach((p) => {
+      const paragraphEl = p as HTMLElement;
+      paragraphEl.style.color = textColor;
+    });
+
+    const segments = content.querySelectorAll(".transcript-segment");
+    segments.forEach((s) => {
+      const segmentEl = s as HTMLElement;
+      if (!segmentEl.classList.contains("active")) {
+        segmentEl.style.color = textColor;
+      }
+    });
   });
   observer.observe(document.documentElement, {
     attributes: true,
@@ -613,80 +680,55 @@ function setupVideoTimeTracking(content: HTMLElement): void {
   if (video) {
     video.addEventListener("timeupdate", () => {
       const currentTime = video.currentTime;
-      const lines = content.querySelectorAll(".transcript-line");
+      const segments = content.querySelectorAll(".transcript-segment");
       const isCurrentlyDarkMode = isDarkMode();
 
-      lines.forEach((line) => {
-        const lineEl = line as HTMLElement;
-        const start = parseFloat(lineEl.dataset.start || "0");
-        const duration = parseFloat(lineEl.dataset.duration || "2");
+      let activeSegment: HTMLElement | null = null;
+
+      segments.forEach((segment) => {
+        const segmentEl = segment as HTMLElement;
+        const start = parseFloat(segmentEl.dataset.start || "0");
+        const duration = parseFloat(segmentEl.dataset.duration || "2");
         const end = start + duration;
 
         if (currentTime >= start && currentTime < end) {
-          lineEl.classList.add("active");
-          const textEl = lineEl.querySelector(".transcript-text") as HTMLElement;
+          segmentEl.classList.add("active");
+          activeSegment = segmentEl;
 
-          lineEl.style.cssText = `
-            margin-bottom: 0.5rem;
-            padding: 0.5rem 0.75rem;
-            border-radius: 0.5rem;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: baseline;
-            gap: 0.75rem;
+          // Highlight the active segment
+          segmentEl.style.cssText = `
             background-color: ${
               isCurrentlyDarkMode
-                ? "rgba(30, 58, 138, 0.3)"
-                : "rgba(219, 234, 254, 0.5)"
+                ? "rgba(59, 130, 246, 0.4)"
+                : "rgba(59, 130, 246, 0.25)"
             };
-            border-left: 4px solid #3b82f6;
+            color: ${isCurrentlyDarkMode ? "#93c5fd" : "#1e40af"};
+            font-weight: 600;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
           `;
-
-          if (textEl) {
-            textEl.style.color = isCurrentlyDarkMode ? "#93c5fd" : "#1e40af";
-            textEl.style.fontWeight = "500";
-          }
-
-          if (!isUserScrolling) {
-            const lineTop = lineEl.offsetTop;
-            const containerHeight = content.clientHeight;
-            const lineHeight = lineEl.clientHeight;
-            const scrollPosition = lineTop - containerHeight / 2 + lineHeight / 2;
-            content.scrollTo({ top: scrollPosition, behavior: "smooth" });
-          }
         } else {
-          lineEl.classList.remove("active");
-          const textEl = lineEl.querySelector(".transcript-text") as HTMLElement;
-
-          lineEl.style.cssText = `
-            margin-bottom: 0.5rem;
-            padding: 0.5rem 0.75rem;
-            border-radius: 0.5rem;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: baseline;
-            gap: 0.75rem;
+          segmentEl.classList.remove("active");
+          const inactiveTextColor = isCurrentlyDarkMode ? "#e5e7eb" : "#1f2937";
+          segmentEl.style.cssText = `
+            color: ${inactiveTextColor};
+            transition: all 0.2s ease;
+            cursor: pointer;
           `;
-
-          if (textEl) {
-            textEl.style.color = isCurrentlyDarkMode ? "#e5e7eb" : "#1f2937";
-            textEl.style.fontWeight = "400";
-          }
-
-          lineEl.onmouseover = function () {
-            if (!lineEl.classList.contains("active")) {
-              lineEl.style.backgroundColor = isCurrentlyDarkMode
-                ? "rgba(55, 65, 81, 0.5)"
-                : "rgba(243, 244, 246, 0.8)";
-            }
-          };
-          lineEl.onmouseout = function () {
-            if (!lineEl.classList.contains("active")) {
-              lineEl.style.backgroundColor = "transparent";
-            }
-          };
         }
       });
+
+      // Auto-scroll to active segment
+      if (activeSegment && !isUserScrolling) {
+        const segmentTop = activeSegment.getBoundingClientRect().top;
+        const contentTop = content.getBoundingClientRect().top;
+        const relativeTop = segmentTop - contentTop + content.scrollTop;
+        const containerHeight = content.clientHeight;
+        const scrollPosition = relativeTop - containerHeight / 2;
+        content.scrollTo({ top: scrollPosition, behavior: "smooth" });
+      }
     });
   }
 }

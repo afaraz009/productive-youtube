@@ -4,7 +4,7 @@ This document is a reference for Claude and Gemini, to understand and work with 
 
 ## 1. Project Overview
 
-This is a Chrome browser extension that removes YouTube Shorts, homepage videos, and video suggestions from YouTube. It also provides video transcripts with AI translation features. Built with React, TypeScript, and Tailwind CSS using a modular architecture.
+This is a Chrome browser extension that removes YouTube Shorts, homepage videos, and video suggestions from YouTube.  Built with React, TypeScript, and Tailwind CSS using a modular architecture.
 
 ## 2. Tech Stack
 
@@ -31,16 +31,11 @@ This is a Chrome browser extension that removes YouTube Shorts, homepage videos,
 │   │   │   ├── suggestions.ts     # Remove video suggestions
 │   │   │   └── shortsButton.ts    # Remove Shorts sidebar button
 │   │   ├── transcript/            # Transcript feature modules
-│   │   │   ├── index.ts           # Main transcript coordinator
-│   │   │   ├── api.ts             # YouTube API calls
-│   │   │   ├── parser.ts          # XML parsing
-│   │   │   ├── display.ts         # UI rendering
-│   │   │   └── utils.ts           # Helper functions
-│   │   └── translation/           # AI translation modules
-│   │       ├── index.ts           # Translation coordinator
-│   │       ├── api.ts             # Translation API
-│   │       ├── popup.ts           # Translation popup UI
-│   │       └── theme.ts           # Theme detection/management
+│   │      ├── index.ts           # Main transcript coordinator
+│   │      ├── api.ts             # YouTube API calls
+│   │      ├── parser.ts          # XML parsing
+│   │      ├── display.ts         # UI rendering
+│   │      └── utils.ts           # Helper functions
 │   ├── popup.html                 # Popup entry point
 │   └── popup.tsx                  # React entry point for popup
 ├── public/
@@ -57,7 +52,7 @@ This is a Chrome browser extension that removes YouTube Shorts, homepage videos,
 ### Core Files
 
 -   **`src/scripts/content.ts`**: Main orchestrator that coordinates all features. Very lightweight (115 lines), imports and uses all modules below.
--   **`src/scripts/types.ts`**: TypeScript interfaces (`Settings`, `VideoInfo`, `TranslationResponse`).
+-   **`src/scripts/types.ts`**: TypeScript interfaces (`Settings`, `VideoInfo`).
 -   **`src/scripts/selectors.ts`**: All DOM selector constants organized by feature.
 -   **`src/scripts/settings.ts`**: Settings management with Chrome storage integration.
 
@@ -80,14 +75,6 @@ Handles video transcript fetching and display:
 -   **`display.ts`**: Creates and manages transcript UI with copy/sync features.
 -   **`utils.ts`**: Helper functions (getVideoId, formatTimestamp, page detection).
 
-### Translation Module (`src/scripts/translation/`)
-
-AI-powered translation feature:
-
--   **`index.ts`**: Translation coordinator, re-exports all functions.
--   **`api.ts`**: Calls translation API via background worker with caching.
--   **`popup.ts`**: Creates translation popup UI and handles text selection.
--   **`theme.ts`**: Detects and applies dark/light mode to popup.
 
 ### UI Components
 
@@ -140,20 +127,9 @@ showVideoTranscript()
   ├─► fetchTranscriptXml() (api.ts)
   ├─► parseTranscript() (parser.ts)
   ├─► displayTranscript() (display.ts)
-  └─► initializeTranscriptSelection() (translation/popup.ts)
-```
-
-### Translation Feature Flow
 
 ```
-User selects text in transcript
-  ├─► initializeTranscriptSelection() (translation/popup.ts)
-  ├─► showTranslationPopup() (translation/popup.ts)
-  ├─► translateWithAI() (translation/api.ts)
-  │    ├─► Check cache
-  │    └─► chrome.runtime.sendMessage() to background worker
-  └─► Display results with theme support (theme.ts)
-```
+
 
 ## 7. How to Add a New Feature
 
@@ -224,7 +200,7 @@ User selects text in transcript
 
 ### For a New UI Component
 
-1.  Create component in transcript/display.ts or translation/popup.ts
+1.  Create component in transcript/display.ts 
 2.  Follow existing UI patterns (dark mode support, inline styles)
 3.  Export and use in appropriate context
 
