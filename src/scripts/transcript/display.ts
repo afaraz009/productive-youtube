@@ -1,6 +1,33 @@
 import { settings } from "../settings";
 import { formatTimestamp, decodeHtmlEntities, cleanTranscriptText } from "./utils";
 
+function getVideoTitle(): string {
+  // Try multiple selectors to get the video title
+  const titleSelectors = [
+    'h1.ytd-watch-metadata yt-formatted-string',
+    'h1.ytd-video-primary-info-renderer',
+    'h1.title.ytd-video-primary-info-renderer',
+    'ytd-watch-metadata h1',
+    'h1 yt-formatted-string'
+  ];
+
+  for (const selector of titleSelectors) {
+    const titleElement = document.querySelector(selector);
+    if (titleElement && titleElement.textContent) {
+      return titleElement.textContent.trim();
+    }
+  }
+
+  // Fallback: try to get from document title
+  const docTitle = document.title;
+  if (docTitle && docTitle !== 'YouTube') {
+    // Remove " - YouTube" suffix if present
+    return docTitle.replace(/ - YouTube$/, '').trim();
+  }
+
+  return 'Video Title Not Found';
+}
+
 export function displayTranscript(transcript: { text: string; start: number }[]): void {
   console.log(
     "Productive YouTube: displayTranscript function called with",
@@ -307,6 +334,14 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
 
   copyButton.onclick = (e) => {
     e.stopPropagation();
+
+    // Get video title
+    const videoTitle = getVideoTitle();
+
+    // Get video URL
+    const videoUrl = window.location.href.split('&')[0]; // Remove extra params
+
+    // Build transcript text
     const transcriptText = chunkedTranscript
       .map((chunk) => {
         const chunkTimestamp = formatTimestamp(chunk.start);
@@ -314,7 +349,11 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
         return `[${chunkTimestamp}] ${chunkText}`;
       })
       .join("\n\n");
-    navigator.clipboard.writeText(transcriptText);
+
+    // Format the complete text with title, URL, and transcript
+    const completeText = `${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
+
+    navigator.clipboard.writeText(completeText);
 
     copyButton.style.color = "#10b981";
     const svg = copyButton.querySelector("svg");
