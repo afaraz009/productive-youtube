@@ -203,15 +203,16 @@ export function displayTranscript(transcript: { text: string; start: number }[])
 function createTranscriptHeader(): HTMLElement {
   const header = document.createElement("div");
   header.className = "transcript-header";
+  const isDark = isDarkMode();
   header.style.cssText = `
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.25rem 1.5rem;
-    border-bottom: 3px solid rgba(229, 231, 235, 0.6);
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid ${isDark ? 'rgba(60, 60, 60, 0.6)' : 'rgba(229, 231, 235, 0.6)'};
     cursor: pointer;
-    background: linear-gradient(135deg, rgba(249, 250, 251, 0.8) 0%, rgba(243, 244, 246, 0.6) 100%);
-    gap: 1rem;
+    background: ${isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(249, 250, 251, 0.8)'};
+    gap: 0.5rem;
   `;
 
   const title = document.createElement("div");
@@ -307,6 +308,7 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
   copyButton.appendChild(copyIconSvg);
 
   copyButton.style.cssText = `
+    background: transparent;
     color: #3b82f6;
     padding: 0.5rem;
     border-radius: 6px;
@@ -324,10 +326,12 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
   `;
 
   copyButton.onmouseover = () => {
+    copyButton.style.background = "rgba(59, 130, 246, 0.1)";
     copyButton.style.color = "#2563eb";
     copyButton.style.transform = "scale(1.1)";
   };
   copyButton.onmouseout = () => {
+    copyButton.style.background = "transparent";
     copyButton.style.color = "#3b82f6";
     copyButton.style.transform = "scale(1)";
   };
@@ -355,6 +359,7 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
 
     navigator.clipboard.writeText(completeText);
 
+    copyButton.style.background = "transparent";
     copyButton.style.color = "#10b981";
     const svg = copyButton.querySelector("svg");
     if (svg) {
@@ -367,6 +372,7 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
           <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
         `;
       }
+      copyButton.style.background = "transparent";
       copyButton.style.color = "#3b82f6";
     }, 2000);
   };
@@ -497,9 +503,9 @@ function createChunkHeader(chunk: any): HTMLElement {
     font-size: 14px;
     line-height: 1.4em;
     font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-    margin-bottom: 0.75rem;
-    margin-top: 1.25rem;
-    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.125rem;
+    margin-top: 0.125rem;
+    padding: 0.25rem 0.75rem;
     border-radius: 6px;
     border-left: 3px solid #2563eb;
     display: inline-block;
@@ -532,7 +538,7 @@ function createChunkParagraph(chunk: any): HTMLElement {
   const textColor = isCurrentlyDarkMode ? "#e5e7eb" : "#1f2937";
 
   paragraphEl.style.cssText = `
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.1rem;
     padding: 0.75rem 1rem;
     border-radius: 0.5rem;
     line-height: 1.8em;
@@ -655,6 +661,20 @@ function applyDarkModeStyles(
       box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 4px 12px -4px rgba(0, 0, 0, 0.3);
       overflow: hidden;
     `;
+    header.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid rgba(60, 60, 60, 0.6);
+      cursor: pointer;
+      background: rgba(30, 30, 30, 0.8);
+      gap: 0.5rem;
+    `;
+    const title = header.querySelector(".transcript-title") as HTMLElement;
+    if (title) {
+      title.style.color = "#e5e7eb";
+    }
     content.style.maxHeight = maxHeight;
   } else {
     container.style.cssText = `
@@ -667,6 +687,20 @@ function applyDarkModeStyles(
       box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 12px -4px rgba(0, 0, 0, 0.08);
       overflow: hidden;
     `;
+    header.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid rgba(229, 231, 235, 0.6);
+      cursor: pointer;
+      background: rgba(249, 250, 251, 0.8);
+      gap: 0.5rem;
+    `;
+    const title = header.querySelector(".transcript-title") as HTMLElement;
+    if (title) {
+      title.style.color = "#1f2937";
+    }
     content.style.maxHeight = maxHeight;
   }
 }
@@ -701,6 +735,16 @@ function setupDarkModeObserver(
     attributeFilter: ["class"],
   });
   observer.observe(document.body, { attributes: true });
+  
+  // Also observe for style changes on body
+  const bodyObserver = new MutationObserver(() => {
+    const currentDarkMode = isDarkMode();
+    applyDarkModeStyles(currentDarkMode, container, header, content);
+  });
+  bodyObserver.observe(document.body, { 
+    attributes: true, 
+    attributeFilter: ["style"] 
+  });
 }
 
 function setupVideoTimeTracking(content: HTMLElement): void {
