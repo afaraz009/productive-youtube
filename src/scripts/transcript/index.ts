@@ -56,18 +56,23 @@ export async function showVideoTranscript(): Promise<void> {
       currentVideoId = videoId;
     }
 
-    // Wait a bit for YouTube to load the player response, then try again
+    // Wait a bit for YouTube to load the player response
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // First, try to use the existing player response on the page
     let playerApiResponse = null;
 
     // @ts-ignore
-    if (window.ytInitialPlayerResponse) {
-      // @ts-ignore
-      playerApiResponse = window.ytInitialPlayerResponse;
+    const ytResponse = window.ytInitialPlayerResponse;
+
+    // Check if ytInitialPlayerResponse exists AND matches the current video
+    // During SPA navigation, this object may contain stale data from previous video
+    const responseVideoId = ytResponse?.videoDetails?.videoId;
+
+    if (ytResponse && responseVideoId === videoId) {
+      playerApiResponse = ytResponse;
       console.log(
-        "Productive YouTube: Using ytInitialPlayerResponse from page"
+        "Productive YouTube: Using ytInitialPlayerResponse from page (video ID matches)"
       );
       // Debug: log the captions structure
       if (playerApiResponse?.captions) {
@@ -84,11 +89,22 @@ export async function showVideoTranscript(): Promise<void> {
         );
       }
     } else {
-      console.log(
-        "Productive YouTube: ytInitialPlayerResponse not found on page, fetching from API"
-      );
+      if (ytResponse && responseVideoId !== videoId) {
+        console.log(
+          "Productive YouTube: ytInitialPlayerResponse contains stale data (expected:",
+          videoId,
+          "got:",
+          responseVideoId,
+          "), fetching from API"
+        );
+      } else {
+        console.log(
+          "Productive YouTube: ytInitialPlayerResponse not found on page, fetching from API"
+        );
+      }
+
       try {
-        // If not available on page, fetch it
+        // Fetch fresh data from API
         const videoPageHtml = await fetchVideoPage(videoId);
         const apiKey = extractApiKey(videoPageHtml);
         if (!apiKey) {
