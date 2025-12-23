@@ -9,6 +9,15 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       });
     return true; // Keep message channel open for async response
   }
+
+  if (request.type === "OPEN_CHATGPT") {
+    handleChatGPTOpen(request.content)
+      .then(sendResponse)
+      .catch((error) => {
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Keep message channel open for async response
+  }
 });
 
 async function handleTranslation(text: string) {
@@ -49,6 +58,68 @@ async function handleTranslation(text: string) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Translation failed",
+    };
+  }
+}
+
+async function handleChatGPTOpen(content: string) {
+  try {
+    // Store content in chrome.storage for the automation script to retrieve
+    await chrome.storage.local.set({
+      chatgpt_content: {
+        content: content,
+        timestamp: Date.now(),
+      },
+    });
+
+    // Open ChatGPT in a new tab
+    const tab = await chrome.tabs.create({
+      url: "https://chatgpt.com/",
+      active: true,
+    });
+
+    if (!tab.id) {
+      throw new Error("Failed to create tab");
+    }
+
+    // Set up listener for when the tab finishes loading
+    const tabId = tab.id;
+    const listener = (
+      updatedTabId: number,
+      changeInfo: chrome.tabs.TabChangeInfo
+    ) => {
+      if (updatedTabId === tabId && changeInfo.status === "complete") {
+        // Inject the automation script
+        chrome.scripting
+          .executeScript({
+            target: { tabId: tabId },
+            files: ["chatgpt_automation.js"],
+          })
+          .then(() => {
+            console.log("ChatGPT automation script injected");
+            // Clean up listener
+            chrome.tabs.onUpdated.removeListener(listener);
+          })
+          .catch((error) => {
+            console.error("Failed to inject automation script:", error);
+            chrome.tabs.onUpdated.removeListener(listener);
+          });
+      }
+    };
+
+    chrome.tabs.onUpdated.addListener(listener);
+
+    // Clean up listener after 30 seconds if it hasn't fired
+    setTimeout(() => {
+      chrome.tabs.onUpdated.removeListener(listener);
+    }, 30000);
+
+    return { success: true };
+  } catch (error) {
+    console.error("ChatGPT open error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to open ChatGPT",
     };
   }
 }

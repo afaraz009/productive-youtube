@@ -280,9 +280,15 @@ function setupHeaderButtons(
 
   const copyButton = createCopyButton(chunkedTranscript);
   const syncButton = createSyncButton(content);
+  const translateButton = createTranslateButton(chunkedTranscript);
+  const summaryButton = createSummaryButton(chunkedTranscript);
+  const vocabularyButton = createVocabularyButton(chunkedTranscript);
 
   headerButtons.appendChild(copyButton);
   headerButtons.appendChild(syncButton);
+  headerButtons.appendChild(translateButton);
+  headerButtons.appendChild(summaryButton);
+  headerButtons.appendChild(vocabularyButton);
 
   return { copyButton, syncButton };
 }
@@ -471,6 +477,351 @@ function createSyncButton(content: HTMLElement): HTMLElement {
   };
 
   return syncButton;
+}
+
+function createTranslateButton(chunkedTranscript: any[]): HTMLElement {
+  const translateButton = document.createElement("button");
+  translateButton.className = "transcript-translate-button";
+  translateButton.title = "Translate transcript to Urdu in ChatGPT";
+
+  const translateIconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  translateIconSvg.setAttribute("width", "20");
+  translateIconSvg.setAttribute("height", "20");
+  translateIconSvg.setAttribute("viewBox", "0 0 24 24");
+  translateIconSvg.setAttribute("fill", "none");
+  translateIconSvg.setAttribute("stroke", "currentColor");
+  translateIconSvg.setAttribute("stroke-width", "2");
+  translateIconSvg.setAttribute("stroke-linecap", "round");
+  translateIconSvg.setAttribute("stroke-linejoin", "round");
+  translateIconSvg.innerHTML = `
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="2" y1="12" x2="22" y2="12"></line>
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+  `;
+  translateButton.appendChild(translateIconSvg);
+
+  translateButton.style.cssText = `
+    background: transparent;
+    color: #8b5cf6;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 20px;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+  `;
+
+  translateButton.onmouseover = () => {
+    translateButton.style.background = "rgba(139, 92, 246, 0.1)";
+    translateButton.style.color = "#7c3aed";
+    translateButton.style.transform = "scale(1.1)";
+  };
+  translateButton.onmouseout = () => {
+    translateButton.style.background = "transparent";
+    translateButton.style.color = "#8b5cf6";
+    translateButton.style.transform = "scale(1)";
+  };
+
+  translateButton.onclick = (e) => {
+    e.stopPropagation();
+
+    // Get video title
+    const videoTitle = getVideoTitle();
+
+    // Get video URL
+    const videoUrl = window.location.href.split('&')[0];
+
+    // Build transcript text
+    const transcriptText = chunkedTranscript
+      .map((chunk) => {
+        const chunkTimestamp = formatTimestamp(chunk.start);
+        const chunkText = chunk.lines.map((line: any) => line.text).join(" ");
+        return `[${chunkTimestamp}] ${chunkText}`;
+      })
+      .join("\n\n");
+
+    // Format with translation prompt
+    const prompt = "Translate the following transcript in urdu. Keep the timestamps and the same format in translated content";
+    const completeText = `${prompt}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
+
+    // Show loading state
+    translateButton.style.color = "#7c3aed";
+    const svg = translateButton.querySelector("svg");
+    if (svg) {
+      svg.style.opacity = "0.5";
+    }
+
+    // Send message to background script
+    chrome.runtime.sendMessage(
+      {
+        type: "OPEN_CHATGPT",
+        content: completeText,
+      },
+      (response) => {
+        // Reset button state
+        if (svg) {
+          svg.style.opacity = "1";
+        }
+        translateButton.style.color = "#8b5cf6";
+
+        if (response && !response.success) {
+          console.error("Failed to open ChatGPT:", response.error);
+        }
+      }
+    );
+  };
+
+  return translateButton;
+}
+
+function createSummaryButton(chunkedTranscript: any[]): HTMLElement {
+  const summaryButton = document.createElement("button");
+  summaryButton.className = "transcript-summary-button";
+  summaryButton.title = "Summarize transcript in ChatGPT";
+
+  const summaryIconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  summaryIconSvg.setAttribute("width", "20");
+  summaryIconSvg.setAttribute("height", "20");
+  summaryIconSvg.setAttribute("viewBox", "0 0 24 24");
+  summaryIconSvg.setAttribute("fill", "none");
+  summaryIconSvg.setAttribute("stroke", "currentColor");
+  summaryIconSvg.setAttribute("stroke-width", "2");
+  summaryIconSvg.setAttribute("stroke-linecap", "round");
+  summaryIconSvg.setAttribute("stroke-linejoin", "round");
+  summaryIconSvg.innerHTML = `
+    <line x1="8" y1="6" x2="21" y2="6"></line>
+    <line x1="8" y1="12" x2="21" y2="12"></line>
+    <line x1="8" y1="18" x2="21" y2="18"></line>
+    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+  `;
+  summaryButton.appendChild(summaryIconSvg);
+
+  summaryButton.style.cssText = `
+    background: transparent;
+    color: #f59e0b;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 20px;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+  `;
+
+  summaryButton.onmouseover = () => {
+    summaryButton.style.background = "rgba(245, 158, 11, 0.1)";
+    summaryButton.style.color = "#d97706";
+    summaryButton.style.transform = "scale(1.1)";
+  };
+  summaryButton.onmouseout = () => {
+    summaryButton.style.background = "transparent";
+    summaryButton.style.color = "#f59e0b";
+    summaryButton.style.transform = "scale(1)";
+  };
+
+  summaryButton.onclick = (e) => {
+    e.stopPropagation();
+
+    // Get video title
+    const videoTitle = getVideoTitle();
+
+    // Get video URL
+    const videoUrl = window.location.href.split('&')[0];
+
+    // Build transcript text
+    const transcriptText = chunkedTranscript
+      .map((chunk) => {
+        const chunkTimestamp = formatTimestamp(chunk.start);
+        const chunkText = chunk.lines.map((line: any) => line.text).join(" ");
+        return `[${chunkTimestamp}] ${chunkText}`;
+      })
+      .join("\n\n");
+
+    // Format with summary prompt
+    const prompt = `# YouTube Video Summary Generator
+
+## Instructions
+You will be provided with the Title, URL, and Transcript of a YouTube video.
+Create a comprehensive yet accessible summary with the following structure:
+
+### Video:
+Create a clickable hyperlink using the video Title as the link text and the URL as the destination.
+
+### TL;DR:
+Provide a concise summary (1-3 sentences) capturing the essential message or purpose of the video.
+
+### Key Points:
+List 3-7 core ideas, arguments, or insights presented in the video. Each point should be:
+- One to three sentences in length
+- Specific enough to convey meaningful information
+- Written in clear, straightforward language
+
+### Detailed Summary with Timestamps:
+Write a comprehensive summary of the video content in 5-20 bullet points, depending on the video length and complexity.
+- Each point should begin with a timestamp (formatted as [mm:ss](URL&t=XXXs)) where XXX is the number of seconds into the video
+- Each summary point should:
+  - Cover a distinct topic, segment, or idea from the video
+  - Be 2-4 sentences long, providing context and specific details
+  - Include relevant examples, data points, or quotes when appropriate
+  - Avoid vague generalizations; instead, capture the actual substance of what was discussed
+  - Use plain language while preserving any essential technical terms
+
+### Additional Context (Optional):
+If relevant, include brief sections on:
+- Background information needed to understand the topic
+- Related resources mentioned in the video
+- Key questions addressed or left unanswered
+
+Format all hyperlinks properly to ensure they are clickable and lead to the correct timestamp in the video.`;
+    const completeText = `${prompt}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
+
+    // Show loading state
+    summaryButton.style.color = "#d97706";
+    const svg = summaryButton.querySelector("svg");
+    if (svg) {
+      svg.style.opacity = "0.5";
+    }
+
+    // Send message to background script
+    chrome.runtime.sendMessage(
+      {
+        type: "OPEN_CHATGPT",
+        content: completeText,
+      },
+      (response) => {
+        // Reset button state
+        if (svg) {
+          svg.style.opacity = "1";
+        }
+        summaryButton.style.color = "#f59e0b";
+
+        if (response && !response.success) {
+          console.error("Failed to open ChatGPT:", response.error);
+        }
+      }
+    );
+  };
+
+  return summaryButton;
+}
+
+function createVocabularyButton(chunkedTranscript: any[]): HTMLElement {
+  const vocabularyButton = document.createElement("button");
+  vocabularyButton.className = "transcript-vocabulary-button";
+  vocabularyButton.title = "Find difficult words and create vocabulary table";
+
+  const vocabularyIconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  vocabularyIconSvg.setAttribute("width", "20");
+  vocabularyIconSvg.setAttribute("height", "20");
+  vocabularyIconSvg.setAttribute("viewBox", "0 0 24 24");
+  vocabularyIconSvg.setAttribute("fill", "none");
+  vocabularyIconSvg.setAttribute("stroke", "currentColor");
+  vocabularyIconSvg.setAttribute("stroke-width", "2");
+  vocabularyIconSvg.setAttribute("stroke-linecap", "round");
+  vocabularyIconSvg.setAttribute("stroke-linejoin", "round");
+  vocabularyIconSvg.innerHTML = `
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+    <line x1="10" y1="8" x2="16" y2="8"></line>
+    <line x1="10" y1="12" x2="16" y2="12"></line>
+    <line x1="10" y1="16" x2="14" y2="16"></line>
+  `;
+  vocabularyButton.appendChild(vocabularyIconSvg);
+
+  vocabularyButton.style.cssText = `
+    background: transparent;
+    color: #ec4899;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 20px;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+  `;
+
+  vocabularyButton.onmouseover = () => {
+    vocabularyButton.style.background = "rgba(236, 72, 153, 0.1)";
+    vocabularyButton.style.color = "#db2777";
+    vocabularyButton.style.transform = "scale(1.1)";
+  };
+  vocabularyButton.onmouseout = () => {
+    vocabularyButton.style.background = "transparent";
+    vocabularyButton.style.color = "#ec4899";
+    vocabularyButton.style.transform = "scale(1)";
+  };
+
+  vocabularyButton.onclick = (e) => {
+    e.stopPropagation();
+
+    // Get video title
+    const videoTitle = getVideoTitle();
+
+    // Get video URL
+    const videoUrl = window.location.href.split('&')[0];
+
+    // Build transcript text
+    const transcriptText = chunkedTranscript
+      .map((chunk) => {
+        const chunkTimestamp = formatTimestamp(chunk.start);
+        const chunkText = chunk.lines.map((line: any) => line.text).join(" ");
+        return `[${chunkTimestamp}] ${chunkText}`;
+      })
+      .join("\n\n");
+
+    // Format with vocabulary prompt
+    const prompt = `Find all difficult words and create a table of English to Urdu and English to English meaning`;
+    const completeText = `${prompt}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
+
+    // Show loading state
+    vocabularyButton.style.color = "#db2777";
+    const svg = vocabularyButton.querySelector("svg");
+    if (svg) {
+      svg.style.opacity = "0.5";
+    }
+
+    // Send message to background script
+    chrome.runtime.sendMessage(
+      {
+        type: "OPEN_CHATGPT",
+        content: completeText,
+      },
+      (response) => {
+        // Reset button state
+        if (svg) {
+          svg.style.opacity = "1";
+        }
+        vocabularyButton.style.color = "#ec4899";
+
+        if (response && !response.success) {
+          console.error("Failed to open ChatGPT:", response.error);
+        }
+      }
+    );
+  };
+
+  return vocabularyButton;
 }
 
 function setupHeaderToggle(header: HTMLElement, content: HTMLElement): void {

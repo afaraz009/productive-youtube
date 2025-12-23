@@ -11,6 +11,7 @@ export default defineConfig({
         popup: "src/popup.html",
         content: "src/scripts/content.ts",
         background: "src/background.ts",
+        chatgpt_automation: "src/scripts/chatgpt-automation.ts",
       },
       output: {
         entryFileNames: (chunkInfo) => {
@@ -19,6 +20,9 @@ export default defineConfig({
           }
           if (chunkInfo.name === "background") {
             return "background.js";
+          }
+          if (chunkInfo.name === "chatgpt_automation") {
+            return "chatgpt_automation.js";
           }
           return "[name].js";
         },
