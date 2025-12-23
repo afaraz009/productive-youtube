@@ -18,6 +18,15 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       });
     return true; // Keep message channel open for async response
   }
+
+  if (request.type === "OPEN_AI_SERVICE") {
+    handleAIServiceOpen(request.aiService, request.content)
+      .then(sendResponse)
+      .catch((error) => {
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Keep message channel open for async response
+  }
 });
 
 async function handleTranslation(text: string) {
@@ -120,6 +129,105 @@ async function handleChatGPTOpen(content: string) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to open ChatGPT",
+    };
+  }
+}
+
+type AIService = 'chatgpt' | 'gemini' | 'claude' | 'grok';
+
+interface AIServiceConfig {
+  url: string;
+  scriptFile: string;
+  storageKey: string;
+}
+
+const AI_SERVICE_CONFIGS: Record<AIService, AIServiceConfig> = {
+  chatgpt: {
+    url: "https://chatgpt.com/",
+    scriptFile: "chatgpt_automation.js",
+    storageKey: "chatgpt_content"
+  },
+  gemini: {
+    url: "https://gemini.google.com/app",
+    scriptFile: "gemini_automation.js",
+    storageKey: "gemini_content"
+  },
+  claude: {
+    url: "https://claude.ai/",
+    scriptFile: "claude_automation.js",
+    storageKey: "claude_content"
+  },
+  grok: {
+    url: "https://grok.com/",
+    scriptFile: "grok_automation.js",
+    storageKey: "grok_content"
+  }
+};
+
+async function handleAIServiceOpen(aiService: AIService, content: string) {
+  try {
+    const config = AI_SERVICE_CONFIGS[aiService];
+
+    if (!config) {
+      throw new Error(`Unknown AI service: ${aiService}`);
+    }
+
+    // Store content in chrome.storage for the automation script to retrieve
+    await chrome.storage.local.set({
+      [config.storageKey]: {
+        content: content,
+        timestamp: Date.now(),
+      },
+    });
+
+    // Open AI service in a new tab
+    const tab = await chrome.tabs.create({
+      url: config.url,
+      active: true,
+    });
+
+    if (!tab.id) {
+      throw new Error("Failed to create tab");
+    }
+
+    // Set up listener for when the tab finishes loading
+    const tabId = tab.id;
+    const listener = (
+      updatedTabId: number,
+      changeInfo: chrome.tabs.TabChangeInfo
+    ) => {
+      if (updatedTabId === tabId && changeInfo.status === "complete") {
+        // Inject the automation script
+        chrome.scripting
+          .executeScript({
+            target: { tabId: tabId },
+            files: [config.scriptFile],
+          })
+          .then(() => {
+            console.log(`${aiService} automation script injected`);
+            // Clean up listener
+            chrome.tabs.onUpdated.removeListener(listener);
+          })
+          .catch((error) => {
+            console.error(`Failed to inject ${aiService} automation script:`, error);
+            chrome.tabs.onUpdated.removeListener(listener);
+          });
+      }
+    };
+
+    chrome.tabs.onUpdated.addListener(listener);
+
+    // Clean up listener after 30 seconds if it hasn't fired
+    setTimeout(() => {
+      chrome.tabs.onUpdated.removeListener(listener);
+    }, 30000);
+
+    return { success: true };
+  } catch (error) {
+    console.error(`${aiService} open error:`, error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : `Failed to open ${aiService}`,
     };
   }
 }

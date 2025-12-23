@@ -547,8 +547,8 @@ function createTranslateButton(chunkedTranscript: any[]): HTMLElement {
       })
       .join("\n\n");
 
-    // Format with translation prompt
-    const prompt = "Translate the following transcript in urdu. Keep the timestamps and the same format in translated content";
+    // Format with translation prompt from settings
+    const prompt = settings.aiPrompts.translate;
     const completeText = `${prompt}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
 
     // Show loading state
@@ -558,10 +558,11 @@ function createTranslateButton(chunkedTranscript: any[]): HTMLElement {
       svg.style.opacity = "0.5";
     }
 
-    // Send message to background script
+    // Send message to background script with AI service selection
     chrome.runtime.sendMessage(
       {
-        type: "OPEN_CHATGPT",
+        type: "OPEN_AI_SERVICE",
+        aiService: settings.aiService,
         content: completeText,
       },
       (response) => {
@@ -572,7 +573,7 @@ function createTranslateButton(chunkedTranscript: any[]): HTMLElement {
         translateButton.style.color = "#8b5cf6";
 
         if (response && !response.success) {
-          console.error("Failed to open ChatGPT:", response.error);
+          console.error("Failed to open AI service:", response.error);
         }
       }
     );
@@ -652,42 +653,8 @@ function createSummaryButton(chunkedTranscript: any[]): HTMLElement {
       })
       .join("\n\n");
 
-    // Format with summary prompt
-    const prompt = `# YouTube Video Summary Generator
-
-## Instructions
-You will be provided with the Title, URL, and Transcript of a YouTube video.
-Create a comprehensive yet accessible summary with the following structure:
-
-### Video:
-Create a clickable hyperlink using the video Title as the link text and the URL as the destination.
-
-### TL;DR:
-Provide a concise summary (1-3 sentences) capturing the essential message or purpose of the video.
-
-### Key Points:
-List 3-7 core ideas, arguments, or insights presented in the video. Each point should be:
-- One to three sentences in length
-- Specific enough to convey meaningful information
-- Written in clear, straightforward language
-
-### Detailed Summary with Timestamps:
-Write a comprehensive summary of the video content in 5-20 bullet points, depending on the video length and complexity.
-- Each point should begin with a timestamp (formatted as [mm:ss](URL&t=XXXs)) where XXX is the number of seconds into the video
-- Each summary point should:
-  - Cover a distinct topic, segment, or idea from the video
-  - Be 2-4 sentences long, providing context and specific details
-  - Include relevant examples, data points, or quotes when appropriate
-  - Avoid vague generalizations; instead, capture the actual substance of what was discussed
-  - Use plain language while preserving any essential technical terms
-
-### Additional Context (Optional):
-If relevant, include brief sections on:
-- Background information needed to understand the topic
-- Related resources mentioned in the video
-- Key questions addressed or left unanswered
-
-Format all hyperlinks properly to ensure they are clickable and lead to the correct timestamp in the video.`;
+    // Format with summary prompt from settings
+    const prompt = settings.aiPrompts.summarize;
     const completeText = `${prompt}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
 
     // Show loading state
@@ -697,10 +664,11 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
       svg.style.opacity = "0.5";
     }
 
-    // Send message to background script
+    // Send message to background script with AI service selection
     chrome.runtime.sendMessage(
       {
-        type: "OPEN_CHATGPT",
+        type: "OPEN_AI_SERVICE",
+        aiService: settings.aiService,
         content: completeText,
       },
       (response) => {
@@ -711,7 +679,7 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
         summaryButton.style.color = "#f59e0b";
 
         if (response && !response.success) {
-          console.error("Failed to open ChatGPT:", response.error);
+          console.error("Failed to open AI service:", response.error);
         }
       }
     );
@@ -790,8 +758,8 @@ function createVocabularyButton(chunkedTranscript: any[]): HTMLElement {
       })
       .join("\n\n");
 
-    // Format with vocabulary prompt
-    const prompt = `Find all difficult words and create a table of English to Urdu and English to English meaning`;
+    // Format with vocabulary prompt from settings
+    const prompt = settings.aiPrompts.vocabulary;
     const completeText = `${prompt}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
 
     // Show loading state
@@ -801,10 +769,11 @@ function createVocabularyButton(chunkedTranscript: any[]): HTMLElement {
       svg.style.opacity = "0.5";
     }
 
-    // Send message to background script
+    // Send message to background script with AI service selection
     chrome.runtime.sendMessage(
       {
-        type: "OPEN_CHATGPT",
+        type: "OPEN_AI_SERVICE",
+        aiService: settings.aiService,
         content: completeText,
       },
       (response) => {
@@ -815,7 +784,7 @@ function createVocabularyButton(chunkedTranscript: any[]): HTMLElement {
         vocabularyButton.style.color = "#ec4899";
 
         if (response && !response.success) {
-          console.error("Failed to open ChatGPT:", response.error);
+          console.error("Failed to open AI service:", response.error);
         }
       }
     );

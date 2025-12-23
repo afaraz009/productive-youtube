@@ -10,7 +10,10 @@
     "https://www.youtube.com/watch*",
     "https://api.mymemory.translated.net/*",
     "https://chatgpt.com/*",
-    "https://chat.openai.com/*"
+    "https://chat.openai.com/*",
+    "https://gemini.google.com/*",
+    "https://claude.ai/*",
+    "https://grok.com/*"
   ],
   "background": {
     "service_worker": "background.js"
