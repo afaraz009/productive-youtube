@@ -3,15 +3,36 @@ import { getVideoId } from "./utils";
 import {
   fetchVideoPage,
   extractApiKey,
+  extractApiKeyFromDOM,
   fetchPlayerApi,
   extractTranscriptUrl,
   fetchTranscriptXml,
 } from "./api";
 import { parseTranscript } from "./parser";
 import { displayTranscript } from "./display";
+import {
+  waitForYouTubePlayerReady,
+  waitForSecondarySidebar,
+  retryWithBackoff,
+} from "./domUtils";
 
 // Track the current video ID to detect video changes
 let currentVideoId: string | null = null;
+
+// Clean up transcript containers when leaving watch page
+export function cleanupTranscript(): void {
+  const existingContainer = document.getElementById("transcript-container");
+  const fixedWrapper = document.getElementById("transcript-fixed-wrapper");
+  if (existingContainer) {
+    existingContainer.remove();
+    console.log("Productive YouTube: Transcript container removed");
+  }
+  if (fixedWrapper) {
+    fixedWrapper.remove();
+    console.log("Productive YouTube: Fixed wrapper removed");
+  }
+  currentVideoId = null;
+}
 
 export async function showVideoTranscript(): Promise<void> {
   console.log(
@@ -19,23 +40,40 @@ export async function showVideoTranscript(): Promise<void> {
     settings.showTranscript
   );
 
-  if (!settings.showTranscript) {
-    const existingContainer = document.getElementById("transcript-container");
-    if (existingContainer) {
-      existingContainer.remove();
-      console.log("Productive YouTube: Transcript container removed");
-    }
-    currentVideoId = null; // Reset video ID tracking when transcript is disabled
+  // Check if we're on a watch page
+  if (!window.location.pathname.includes('/watch')) {
+    console.log("Productive YouTube: Not on watch page, cleaning up");
+    cleanupTranscript();
     return;
   }
 
+  if (!settings.showTranscript) {
+    cleanupTranscript();
+    return;
+  }
+
+  // Use retry logic to handle timing issues
+  const result = await retryWithBackoff(
+    async () => await fetchAndDisplayTranscript(),
+    2, // Max 2 retries (3 total attempts)
+    500 // Start with 500ms delay
+  );
+
+  if (!result) {
+    console.error(
+      "Productive YouTube: Failed to show transcript after multiple attempts"
+    );
+  }
+}
+
+async function fetchAndDisplayTranscript(): Promise<boolean> {
   try {
     console.log("Productive YouTube: Starting transcript fetch process...");
 
     const videoId = getVideoId();
     if (!videoId) {
       console.warn("Productive YouTube: Could not get video ID");
-      return;
+      return false;
     }
     console.log("Productive YouTube: Video ID found:", videoId);
 
@@ -56,8 +94,29 @@ export async function showVideoTranscript(): Promise<void> {
       currentVideoId = videoId;
     }
 
-    // Wait a bit for YouTube to load the player response
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // CRITICAL FIX 1: Wait for YouTube's player to be ready
+    console.log("Productive YouTube: Waiting for YouTube player to be ready...");
+    const playerReady = await waitForYouTubePlayerReady(5000);
+
+    // Don't fail if player check times out - continue anyway
+    if (!playerReady) {
+      console.warn(
+        "Productive YouTube: Player ready check timed out, but continuing anyway..."
+      );
+    }
+
+    // CRITICAL FIX 2: Wait for secondary sidebar to exist before we try to display
+    console.log(
+      "Productive YouTube: Waiting for secondary sidebar container..."
+    );
+    const sidebar = await waitForSecondarySidebar(8000);
+    if (!sidebar) {
+      console.warn(
+        "Productive YouTube: Secondary sidebar not found, will retry..."
+      );
+      throw new Error("Sidebar not available");
+    }
+    console.log("Productive YouTube: Secondary sidebar is ready");
 
     // First, try to use the existing player response on the page
     let playerApiResponse = null;
@@ -66,7 +125,6 @@ export async function showVideoTranscript(): Promise<void> {
     const ytResponse = window.ytInitialPlayerResponse;
 
     // Check if ytInitialPlayerResponse exists AND matches the current video
-    // During SPA navigation, this object may contain stale data from previous video
     const responseVideoId = ytResponse?.videoDetails?.videoId;
 
     if (ytResponse && responseVideoId === videoId) {
@@ -74,7 +132,6 @@ export async function showVideoTranscript(): Promise<void> {
       console.log(
         "Productive YouTube: Using ytInitialPlayerResponse from page (video ID matches)"
       );
-      // Debug: log the captions structure
       if (playerApiResponse?.captions) {
         const captionCount =
           playerApiResponse.captions.playerCaptionsTracklistRenderer
@@ -104,14 +161,23 @@ export async function showVideoTranscript(): Promise<void> {
       }
 
       try {
-        // Fetch fresh data from API
-        const videoPageHtml = await fetchVideoPage(videoId);
-        const apiKey = extractApiKey(videoPageHtml);
+        // CRITICAL FIX 3: Try to extract API key from live DOM first
+        let apiKey = extractApiKeyFromDOM();
+
+        // Fallback to fetching if DOM extraction fails
+        if (!apiKey) {
+          console.log(
+            "Productive YouTube: API key not in DOM, fetching video page..."
+          );
+          const videoPageHtml = await fetchVideoPage(videoId);
+          apiKey = extractApiKey(videoPageHtml);
+        }
+
         if (!apiKey) {
           console.warn(
-            "Productive YouTube: Could not extract API key from video page"
+            "Productive YouTube: Could not extract API key from DOM or video page"
           );
-          return;
+          throw new Error("No API key available");
         }
 
         playerApiResponse = await fetchPlayerApi(videoId, apiKey);
@@ -123,13 +189,13 @@ export async function showVideoTranscript(): Promise<void> {
           "Productive YouTube: Failed to fetch from API:",
           fetchError
         );
-        return;
+        throw fetchError;
       }
     }
 
     if (!playerApiResponse) {
       console.warn("Productive YouTube: No player API response received");
-      return;
+      throw new Error("No player response");
     }
 
     console.log("Productive YouTube: Attempting to extract transcript URL...");
@@ -138,7 +204,8 @@ export async function showVideoTranscript(): Promise<void> {
       console.warn(
         "Productive YouTube: Could not extract transcript URL - this video may not have captions available"
       );
-      return;
+      // This is not a retry-able error - video genuinely has no captions
+      return true; // Return true to stop retrying
     }
 
     console.log("Productive YouTube: Transcript URL found, fetching XML...");
@@ -147,7 +214,7 @@ export async function showVideoTranscript(): Promise<void> {
 
     if (!transcript || transcript.length === 0) {
       console.warn("Productive YouTube: No transcript content parsed");
-      return;
+      return true; // Return true to stop retrying
     }
 
     console.log(
@@ -156,8 +223,13 @@ export async function showVideoTranscript(): Promise<void> {
       "entries, displaying..."
     );
     displayTranscript(transcript);
+    return true; // Success!
   } catch (error) {
-    console.error("Productive YouTube: Error showing video transcript:", error);
+    console.error(
+      "Productive YouTube: Error in fetchAndDisplayTranscript:",
+      error
+    );
+    throw error; // Propagate error to trigger retry
   }
 }
 

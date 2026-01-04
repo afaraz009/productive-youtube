@@ -49,8 +49,14 @@ export function removeVideoSuggestions(): void {
           htmlElement.closest("ytd-playlist-panel-renderer") ||
           (htmlElement.id && htmlElement.id.includes("playlist"));
 
+        // Check if this element is the transcript container or contains it
+        const isTranscriptContainer =
+          htmlElement.id === "transcript-container" ||
+          htmlElement.querySelector("#transcript-container") !== null;
+
         if (
           !isPlaylistItem &&
+          !isTranscriptContainer &&
           htmlElement &&
           !htmlElement.dataset.suggestionsRemoved
         ) {
@@ -60,6 +66,8 @@ export function removeVideoSuggestions(): void {
           console.log(
             `Video Suggestions Remover: Hidden element with selector: ${selector}`
           );
+        } else if (isTranscriptContainer) {
+          console.log(`Video Suggestions Remover: Skipped transcript container`);
         } else if (isPlaylistItem) {
           console.log(`Video Suggestions Remover: Skipped playlist item`);
         } else if (htmlElement && htmlElement.dataset.suggestionsRemoved) {

@@ -22,6 +22,24 @@ export function extractApiKey(html: string): string | null {
   return null;
 }
 
+export function extractApiKeyFromDOM(): string | null {
+  console.log("Productive YouTube: Attempting to extract API key from live DOM...");
+
+  // Try to find API key in script tags
+  const scripts = document.querySelectorAll('script');
+  for (const script of scripts) {
+    const content = script.textContent || script.innerHTML;
+    const match = content.match(/"INNERTUBE_API_KEY":"([^"]+)"/);
+    if (match && match[1]) {
+      console.log("Productive YouTube: API key extracted from DOM successfully");
+      return match[1];
+    }
+  }
+
+  console.warn("Productive YouTube: Could not extract API key from DOM");
+  return null;
+}
+
 export async function fetchPlayerApi(
   videoId: string,
   apiKey: string

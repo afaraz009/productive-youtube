@@ -13,7 +13,7 @@ import { removeVideoSuggestions, throttledRemoveVideoSuggestions } from "./remov
 import { removeShortsButton, throttledRemoveShortsButton } from "./removers/shortsButton";
 
 // Import transcript functionality
-import { showVideoTranscript, isWatchPage, isHomePage } from "./transcript";
+import { showVideoTranscript, cleanupTranscript, isWatchPage, isHomePage } from "./transcript";
 
 // Track last video ID to detect video changes during SPA navigation
 let lastVideoId: string | null = null;
@@ -64,8 +64,6 @@ function applyAllRemovals(): void {
 
   // Page-specific removals
   if (isWatchPage()) {
-    removeVideoSuggestions(); // Always call - function handles restore internally
-
     // Sync lastVideoId on initial load
     const urlParams = new URLSearchParams(window.location.search);
     const currentVideoId = urlParams.get("v");
@@ -73,7 +71,12 @@ function applyAllRemovals(): void {
       lastVideoId = currentVideoId;
     }
 
+    // IMPORTANT: Show transcript BEFORE hiding suggestions
+    // so the transcript container exists before we check for it
     showVideoTranscript();
+
+    // Then hide suggestions (but skip transcript container)
+    removeVideoSuggestions(); // Always call - function handles restore internally
   } else if (isHomePage()) {
     removeHomepageVideos();
   }
@@ -116,25 +119,34 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
 
 // Handle YouTube SPA navigation
 function handleYouTubeNavigation(): void {
+  console.log("Productive YouTube: handleYouTubeNavigation called, isWatchPage:", isWatchPage());
+
   if (isWatchPage()) {
     // Get current video ID from URL
     const urlParams = new URLSearchParams(window.location.search);
     const currentVideoId = urlParams.get("v");
+
+    console.log("Productive YouTube: Current video ID:", currentVideoId, "Last video ID:", lastVideoId);
 
     // Only show transcript if video changed or first load
     if (currentVideoId && currentVideoId !== lastVideoId) {
       console.log("Productive YouTube: Navigation detected, video changed from", lastVideoId, "to", currentVideoId);
       lastVideoId = currentVideoId;
 
-      // Small delay to let YouTube update its player response
+      // Give YouTube more time to render the page on SPA navigation
       setTimeout(() => {
+        console.log("Productive YouTube: Calling showVideoTranscript after navigation delay");
         showVideoTranscript();
-      }, 500);
+      }, 1000); // Increased from 500ms to 1000ms
+    } else if (currentVideoId === lastVideoId) {
+      console.log("Productive YouTube: Same video, not re-fetching transcript");
     }
 
     removeVideoSuggestions();
   } else {
+    console.log("Productive YouTube: Not a watch page, cleaning up transcript");
     lastVideoId = null;
+    cleanupTranscript(); // Remove transcript when navigating away from watch page
   }
 }
 
@@ -149,14 +161,18 @@ if (document.readyState === "loading") {
 // This fires when YouTube navigates between pages without a full reload
 document.addEventListener("yt-navigate-finish", () => {
   console.log("Productive YouTube: yt-navigate-finish event detected");
-  handleYouTubeNavigation();
 
-  // Also apply other removals
-  removeShorts();
-  removeShortsButton();
-  if (isHomePage()) {
-    removeHomepageVideos();
-  }
+  // Add a small delay to let YouTube finish its navigation
+  setTimeout(() => {
+    handleYouTubeNavigation();
+
+    // Also apply other removals
+    removeShorts();
+    removeShortsButton();
+    if (isHomePage()) {
+      removeHomepageVideos();
+    }
+  }, 100);
 });
 
 // Also listen for popstate (browser back/forward)
