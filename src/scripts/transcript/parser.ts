@@ -7,13 +7,11 @@ export function parseTranscript(xml: string): { text: string; start: number }[] 
 
     // Check for XML parsing errors
     if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
-      console.error("Productive YouTube: XML parsing error");
       return [];
     }
 
     const textNodes = xmlDoc.getElementsByTagName("text");
     if (textNodes.length === 0) {
-      console.warn("Productive YouTube: No text nodes found in transcript XML");
       return [];
     }
 
@@ -28,7 +26,6 @@ export function parseTranscript(xml: string): { text: string; start: number }[] 
     }
     return transcript;
   } catch (error) {
-    console.error("Productive YouTube: Error parsing transcript:", error);
     return [];
   }
 }

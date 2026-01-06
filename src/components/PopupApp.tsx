@@ -134,9 +134,7 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
     setSettings(newSettings);
 
     if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.local.set({ [key]: value }, () => {
-        console.log(`Setting ${key} saved:`, value);
-      });
+      chrome.storage.local.set({ [key]: value });
     }
   };
 
@@ -146,9 +144,7 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
     setSettings(newSettings);
 
     if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.local.set({ aiService: value }, () => {
-        console.log(`AI Service saved:`, value);
-      });
+      chrome.storage.local.set({ aiService: value });
     }
   };
 
@@ -159,9 +155,7 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
     setSettings(newSettings);
 
     if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.local.set({ aiPrompts: newPrompts }, () => {
-        console.log(`AI Prompt ${promptType} saved`);
-      });
+      chrome.storage.local.set({ aiPrompts: newPrompts });
     }
   };
 

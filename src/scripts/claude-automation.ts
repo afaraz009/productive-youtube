@@ -115,41 +115,30 @@ async function clickSubmitButton(): Promise<void> {
  */
 async function automateClaude(): Promise<void> {
   try {
-    console.log('[Claude Automation] Starting automation...');
-
     // Retrieve content from storage
     const result = await chrome.storage.local.get('claude_content');
     const storedData = result.claude_content as StoredContent | undefined;
 
     if (!storedData || !storedData.content) {
-      console.error('[Claude Automation] No content found in storage');
       return;
     }
 
-    console.log('[Claude Automation] Content retrieved from storage');
-
     // Wait for input field to be ready
-    console.log('[Claude Automation] Waiting for input field...');
     const inputElement = await waitForElement(INPUT_SELECTORS);
-    console.log('[Claude Automation] Input field found:', inputElement.tagName);
 
     // Set the content
     setInputValue(inputElement, storedData.content);
-    console.log('[Claude Automation] Content pasted into input field');
 
     // Wait a moment for the UI to update
     await new Promise(resolve => setTimeout(resolve, 300));
 
     // Click submit button
     await clickSubmitButton();
-    console.log('[Claude Automation] Submit button clicked');
 
     // Clean up storage
     await chrome.storage.local.remove('claude_content');
-    console.log('[Claude Automation] Storage cleaned up');
 
   } catch (error) {
-    console.error('[Claude Automation] Error:', error);
     // Don't clean up storage on error, user might want to retry
   }
 }

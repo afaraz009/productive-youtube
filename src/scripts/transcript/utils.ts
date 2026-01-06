@@ -31,7 +31,7 @@ export function getVideoId(): string | null {
       window.location.href.match(/watch\/([a-zA-Z0-9_-]+)/);
     if (fromHref && fromHref[1]) return fromHref[1];
   } catch (e) {
-    console.warn("getVideoId: error while extracting video id", e);
+    // Silent error handling
   }
 
   return null;

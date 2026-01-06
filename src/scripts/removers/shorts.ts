@@ -20,23 +20,13 @@ export function removeShorts(): void {
         shelfElement.dataset.shortsRemoved = "true";
         shelfElement.style.display = "none";
         removedCount++;
-        console.log(
-          `YouTube Shorts Remover: Hidden element with selector: ${selector}`
-        );
       }
     });
   });
-
-  if (removedCount > 0) {
-    console.log(
-      `YouTube Shorts Remover: Hidden ${removedCount} Shorts shelf(s)`
-    );
-  }
 }
 
 // Function to restore Shorts when feature is disabled
 export function restoreShorts(): void {
-  let restoredCount = 0;
   SHORTS_SELECTORS.forEach((selector) => {
     const shortsShelves = document.querySelectorAll(selector);
     shortsShelves.forEach((shelf) => {
@@ -44,15 +34,9 @@ export function restoreShorts(): void {
       if (shelfElement && shelfElement.dataset.shortsRemoved) {
         shelfElement.style.display = "";
         delete shelfElement.dataset.shortsRemoved;
-        restoredCount++;
       }
     });
   });
-  if (restoredCount > 0) {
-    console.log(
-      `Productive YouTube: Restored ${restoredCount} Shorts shelf(s)`
-    );
-  }
 }
 
 // Throttled function to avoid excessive calls

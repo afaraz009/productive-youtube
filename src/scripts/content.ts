@@ -20,8 +20,6 @@ let lastVideoId: string | null = null;
 
 // Extended initialization to handle all features
 function initializeFullExtension(): void {
-  console.log("Productive YouTube: Initializing...");
-
   // Load settings and then initialize
   loadSettings(function () {
     // Apply all removals based on settings
@@ -51,8 +49,6 @@ function initializeFullExtension(): void {
       childList: true,
       subtree: true,
     });
-
-    console.log("Productive YouTube: Observer started");
   });
 }
 
@@ -104,14 +100,12 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
     for (let key in changes) {
       if (settings.hasOwnProperty(key)) {
         updateSettings({ [key]: changes[key].newValue });
-        console.log(`Setting ${key} changed to ${changes[key].newValue}`);
         needsUpdate = true;
       }
     }
 
     // If settings changed, apply them immediately
     if (needsUpdate) {
-      console.log("Applying settings changes immediately...");
       applyAllRemovals();
     }
   }
@@ -119,32 +113,23 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
 
 // Handle YouTube SPA navigation
 function handleYouTubeNavigation(): void {
-  console.log("Productive YouTube: handleYouTubeNavigation called, isWatchPage:", isWatchPage());
-
   if (isWatchPage()) {
     // Get current video ID from URL
     const urlParams = new URLSearchParams(window.location.search);
     const currentVideoId = urlParams.get("v");
 
-    console.log("Productive YouTube: Current video ID:", currentVideoId, "Last video ID:", lastVideoId);
-
     // Only show transcript if video changed or first load
     if (currentVideoId && currentVideoId !== lastVideoId) {
-      console.log("Productive YouTube: Navigation detected, video changed from", lastVideoId, "to", currentVideoId);
       lastVideoId = currentVideoId;
 
       // Give YouTube more time to render the page on SPA navigation
       setTimeout(() => {
-        console.log("Productive YouTube: Calling showVideoTranscript after navigation delay");
         showVideoTranscript();
       }, 1000); // Increased from 500ms to 1000ms
-    } else if (currentVideoId === lastVideoId) {
-      console.log("Productive YouTube: Same video, not re-fetching transcript");
     }
 
     removeVideoSuggestions();
   } else {
-    console.log("Productive YouTube: Not a watch page, cleaning up transcript");
     lastVideoId = null;
     cleanupTranscript(); // Remove transcript when navigating away from watch page
   }
@@ -160,8 +145,6 @@ if (document.readyState === "loading") {
 // Listen for YouTube's SPA navigation events
 // This fires when YouTube navigates between pages without a full reload
 document.addEventListener("yt-navigate-finish", () => {
-  console.log("Productive YouTube: yt-navigate-finish event detected");
-
   // Add a small delay to let YouTube finish its navigation
   setTimeout(() => {
     handleYouTubeNavigation();
@@ -177,7 +160,6 @@ document.addEventListener("yt-navigate-finish", () => {
 
 // Also listen for popstate (browser back/forward)
 window.addEventListener("popstate", () => {
-  console.log("Productive YouTube: popstate event detected");
   setTimeout(() => {
     handleYouTubeNavigation();
     removeShorts();

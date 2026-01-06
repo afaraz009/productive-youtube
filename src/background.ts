@@ -63,7 +63,6 @@ async function handleTranslation(text: string) {
 
     return { success: true, data: result };
   } catch (error) {
-    console.error("Translation error:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Translation failed",
@@ -105,12 +104,10 @@ async function handleChatGPTOpen(content: string) {
             files: ["chatgpt_automation.js"],
           })
           .then(() => {
-            console.log("ChatGPT automation script injected");
             // Clean up listener
             chrome.tabs.onUpdated.removeListener(listener);
           })
-          .catch((error) => {
-            console.error("Failed to inject automation script:", error);
+          .catch(() => {
             chrome.tabs.onUpdated.removeListener(listener);
           });
       }
@@ -125,7 +122,6 @@ async function handleChatGPTOpen(content: string) {
 
     return { success: true };
   } catch (error) {
-    console.error("ChatGPT open error:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to open ChatGPT",
@@ -204,12 +200,10 @@ async function handleAIServiceOpen(aiService: AIService, content: string) {
             files: [config.scriptFile],
           })
           .then(() => {
-            console.log(`${aiService} automation script injected`);
             // Clean up listener
             chrome.tabs.onUpdated.removeListener(listener);
           })
-          .catch((error) => {
-            console.error(`Failed to inject ${aiService} automation script:`, error);
+          .catch(() => {
             chrome.tabs.onUpdated.removeListener(listener);
           });
       }
@@ -224,7 +218,6 @@ async function handleAIServiceOpen(aiService: AIService, content: string) {
 
     return { success: true };
   } catch (error) {
-    console.error(`${aiService} open error:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : `Failed to open ${aiService}`,

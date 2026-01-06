@@ -4,7 +4,6 @@ import { settings } from "../settings";
 export function removeShortsButton(): void {
   if (!settings.removeShortsButton) {
     // Restore by checking all possible containers
-    let restoredCount = 0;
     const allContainers = document.querySelectorAll(
       "ytd-guide-entry-renderer, ytd-mini-guide-entry-renderer"
     );
@@ -13,14 +12,8 @@ export function removeShortsButton(): void {
       if (htmlElement && htmlElement.dataset.shortsButtonRemoved) {
         htmlElement.style.display = "";
         delete htmlElement.dataset.shortsButtonRemoved;
-        restoredCount++;
       }
     });
-    if (restoredCount > 0) {
-      console.log(
-        `Productive YouTube: Restored ${restoredCount} Shorts button(s)`
-      );
-    }
     return;
   }
 
@@ -41,7 +34,6 @@ export function removeShortsButton(): void {
           htmlElement.dataset.shortsButtonRemoved = "true";
           htmlElement.style.display = "none";
           removedCount++;
-          console.log("Productive YouTube: Hidden Shorts button container");
         }
       });
     } catch (e) {
@@ -61,14 +53,9 @@ export function removeShortsButton(): void {
         parent.dataset.shortsButtonRemoved = "true";
         parent.style.display = "none";
         removedCount++;
-        console.log("Productive YouTube: Hidden Shorts button via parent");
       }
     });
   });
-
-  if (removedCount > 0) {
-    console.log(`Productive YouTube: Hidden ${removedCount} Shorts button(s)`);
-  }
 }
 
 // Throttled functions for all new features

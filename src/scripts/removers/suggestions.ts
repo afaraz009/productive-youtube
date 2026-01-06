@@ -7,7 +7,6 @@ function restoreElements(
   dataAttribute: string,
   logName: string
 ): void {
-  let restoredCount = 0;
   selectors.forEach((selector) => {
     const elements = document.querySelectorAll(selector);
     elements.forEach((element) => {
@@ -15,13 +14,9 @@ function restoreElements(
       if (htmlElement && htmlElement.dataset[dataAttribute]) {
         htmlElement.style.display = "";
         delete htmlElement.dataset[dataAttribute];
-        restoredCount++;
       }
     });
   });
-  if (restoredCount > 0) {
-    console.log(`Productive YouTube: Restored ${restoredCount} ${logName}`);
-  }
 }
 
 // Function to remove video suggestions in the right sidebar (excluding playlist content)
@@ -63,32 +58,12 @@ export function removeVideoSuggestions(): void {
           htmlElement.dataset.suggestionsRemoved = "true";
           htmlElement.style.display = "none";
           removedCount++;
-          console.log(
-            `Video Suggestions Remover: Hidden element with selector: ${selector}`
-          );
-        } else if (isTranscriptContainer) {
-          console.log(`Video Suggestions Remover: Skipped transcript container`);
-        } else if (isPlaylistItem) {
-          console.log(`Video Suggestions Remover: Skipped playlist item`);
-        } else if (htmlElement && htmlElement.dataset.suggestionsRemoved) {
-          // Element already processed, skip
         }
       });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      console.log(
-        `Video Suggestions Remover: Error with selector ${selector}:`,
-        errorMessage
-      );
+      // Silent error handling
     }
   });
-
-  if (removedCount > 0) {
-    console.log(
-      `Video Suggestions Remover: Hidden ${removedCount} video suggestion elements`
-    );
-  }
 }
 
 // Throttled function for removing video suggestions to avoid excessive calls

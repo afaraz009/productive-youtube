@@ -114,41 +114,30 @@ async function clickSubmitButton(): Promise<void> {
  */
 async function automateChatGPT(): Promise<void> {
   try {
-    console.log('[ChatGPT Automation] Starting automation...');
-
     // Retrieve content from storage
     const result = await chrome.storage.local.get('chatgpt_content');
     const storedData = result.chatgpt_content as StoredContent | undefined;
 
     if (!storedData || !storedData.content) {
-      console.error('[ChatGPT Automation] No content found in storage');
       return;
     }
 
-    console.log('[ChatGPT Automation] Content retrieved from storage');
-
     // Wait for input field to be ready
-    console.log('[ChatGPT Automation] Waiting for input field...');
     const inputElement = await waitForElement(INPUT_SELECTORS);
-    console.log('[ChatGPT Automation] Input field found:', inputElement.tagName);
 
     // Set the content
     setInputValue(inputElement, storedData.content);
-    console.log('[ChatGPT Automation] Content pasted into input field');
 
     // Wait a moment for the UI to update
     await new Promise(resolve => setTimeout(resolve, 300));
 
     // Click submit button
     await clickSubmitButton();
-    console.log('[ChatGPT Automation] Submit button clicked');
 
     // Clean up storage
     await chrome.storage.local.remove('chatgpt_content');
-    console.log('[ChatGPT Automation] Storage cleaned up');
 
   } catch (error) {
-    console.error('[ChatGPT Automation] Error:', error);
     // Don't clean up storage on error, user might want to retry
   }
 }
