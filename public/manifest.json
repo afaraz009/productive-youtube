@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Productive YouTube - Focus & Distraction Blocker",
-  "version": "2.0.1",
+  "version": "2.0.3",
   "description": "Transform YouTube into a productivity tool. Block Shorts, autoplay, suggestions, and more. Stay focused on what matters.",
   "permissions": ["storage", "tabs", "scripting"],
   "host_permissions": [

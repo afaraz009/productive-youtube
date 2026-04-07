@@ -1,6 +1,6 @@
 {
   "name": "productive-youtube",
-  "version": "2.0.1",
+  "version": "2.0.3",
   "description": "Transform YouTube into a productivity tool - Block distractions and stay focused",
   "private": true,
   "scripts": {

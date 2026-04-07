@@ -32,7 +32,6 @@ export const VIDEO_SUGGESTIONS_SELECTORS: string[] = [
   ".ytd-watch-next-secondary-results-renderer #items ytd-video-renderer",
   ".ytd-watch-next-secondary-results-renderer #items ytd-compact-video-renderer",
   "ytd-continuation-item-renderer:has(#related)",
-  '[data-session-link]:not([href*="/shorts/"]) > ytd-thumbnail',
   "ytd-item-section-renderer:has(ytd-compact-video-renderer)",
 ];
 

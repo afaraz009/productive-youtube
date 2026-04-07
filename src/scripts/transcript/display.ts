@@ -41,40 +41,29 @@ export function displayTranscript(transcript: { text: string; start: number }[])
     return;
   }
 
-  // Try to find the secondary container first (preferred - automatically hidden in fullscreen)
-  let secondary = document.querySelector("#secondary") as HTMLElement | null;
+  // Use a fixed-position wrapper so the transcript is completely independent of
+  // YouTube's sidebar layout. This avoids conflicts with the suggestion remover
+  // which hides ytd-watch-next-secondary-results-renderer (collapsing #secondary).
+  let transcriptWrapper = document.getElementById("transcript-fixed-wrapper") as HTMLElement | null;
 
-  if (!secondary) {
-    console.log("Productive YouTube: #secondary not found, trying alternatives...");
-    secondary = document.querySelector("ytd-watch-next-secondary-results-renderer") as HTMLElement | null;
+  if (!transcriptWrapper) {
+    // Position the transcript in the right sidebar area
+    transcriptWrapper = document.createElement("div");
+    transcriptWrapper.id = "transcript-fixed-wrapper";
+    transcriptWrapper.style.cssText = `
+      position: fixed !important;
+      top: 80px !important;
+      right: 24px !important;
+      width: 402px !important;
+      max-height: calc(100vh - 100px) !important;
+      z-index: 2000 !important;
+      pointer-events: auto !important;
+      overflow-y: auto !important;
+    `;
+    document.body.appendChild(transcriptWrapper);
   }
 
-  if (!secondary) {
-    console.log("Productive YouTube: ytd-watch-next-secondary-results-renderer not found, trying #secondary-inner...");
-    secondary = document.querySelector("#secondary-inner") as HTMLElement | null;
-  }
-
-  if (!secondary) {
-    console.log("Productive YouTube: No sidebar found, using fixed position wrapper...");
-    // Check if fixed wrapper already exists
-    secondary = document.getElementById("transcript-fixed-wrapper");
-
-    if (!secondary) {
-      console.log("Productive YouTube: Creating fixed position transcript wrapper");
-      secondary = document.createElement("div");
-      secondary.id = "transcript-fixed-wrapper";
-      secondary.style.cssText = `
-        position: fixed !important;
-        top: 80px !important;
-        right: 24px !important;
-        width: 400px !important;
-        max-height: calc(100vh - 100px) !important;
-        z-index: 2000 !important;
-        pointer-events: auto !important;
-      `;
-      document.body.appendChild(secondary);
-    }
-  }
+  const secondary = transcriptWrapper;
 
   if (!secondary) {
     console.error("Productive YouTube: Could not find any suitable container for transcript - giving up");

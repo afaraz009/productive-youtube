@@ -118,79 +118,40 @@ async function fetchAndDisplayTranscript(): Promise<boolean> {
     }
     console.log("Productive YouTube: Secondary sidebar is ready");
 
-    // First, try to use the existing player response on the page
     let playerApiResponse = null;
 
-    // @ts-ignore
-    const ytResponse = window.ytInitialPlayerResponse;
+    // Always use the ANDROID Innertube API to get caption data.
+    // Script tag extraction gives WEB-signed timedtext URLs that return empty
+    // when fetched from an extension context. The ANDROID API returns properly
+    // signed URLs that work.
+    try {
+      let apiKey = extractApiKeyFromDOM();
 
-    // Check if ytInitialPlayerResponse exists AND matches the current video
-    const responseVideoId = ytResponse?.videoDetails?.videoId;
+      if (!apiKey) {
+        console.log(
+          "Productive YouTube: API key not in DOM, fetching video page..."
+        );
+        const videoPageHtml = await fetchVideoPage(videoId);
+        apiKey = extractApiKey(videoPageHtml);
+      }
 
-    if (ytResponse && responseVideoId === videoId) {
-      playerApiResponse = ytResponse;
+      if (!apiKey) {
+        console.warn(
+          "Productive YouTube: Could not extract API key from DOM or video page"
+        );
+        throw new Error("No API key available");
+      }
+
+      playerApiResponse = await fetchPlayerApi(videoId, apiKey);
       console.log(
-        "Productive YouTube: Using ytInitialPlayerResponse from page (video ID matches)"
+        "Productive YouTube: Fetched player response from ANDROID API successfully"
       );
-      if (playerApiResponse?.captions) {
-        const captionCount =
-          playerApiResponse.captions.playerCaptionsTracklistRenderer
-            ?.captionTracks?.length || 0;
-        console.log(
-          "Productive YouTube: Caption tracks available:",
-          captionCount
-        );
-      } else {
-        console.log(
-          "Productive YouTube: No captions object in player response"
-        );
-      }
-    } else {
-      if (ytResponse && responseVideoId !== videoId) {
-        console.log(
-          "Productive YouTube: ytInitialPlayerResponse contains stale data (expected:",
-          videoId,
-          "got:",
-          responseVideoId,
-          "), fetching from API"
-        );
-      } else {
-        console.log(
-          "Productive YouTube: ytInitialPlayerResponse not found on page, fetching from API"
-        );
-      }
-
-      try {
-        // CRITICAL FIX 3: Try to extract API key from live DOM first
-        let apiKey = extractApiKeyFromDOM();
-
-        // Fallback to fetching if DOM extraction fails
-        if (!apiKey) {
-          console.log(
-            "Productive YouTube: API key not in DOM, fetching video page..."
-          );
-          const videoPageHtml = await fetchVideoPage(videoId);
-          apiKey = extractApiKey(videoPageHtml);
-        }
-
-        if (!apiKey) {
-          console.warn(
-            "Productive YouTube: Could not extract API key from DOM or video page"
-          );
-          throw new Error("No API key available");
-        }
-
-        playerApiResponse = await fetchPlayerApi(videoId, apiKey);
-        console.log(
-          "Productive YouTube: Fetched player response from API successfully"
-        );
-      } catch (fetchError) {
-        console.error(
-          "Productive YouTube: Failed to fetch from API:",
-          fetchError
-        );
-        throw fetchError;
-      }
+    } catch (fetchError) {
+      console.error(
+        "Productive YouTube: Failed to fetch from API:",
+        fetchError
+      );
+      throw fetchError;
     }
 
     if (!playerApiResponse) {
@@ -222,6 +183,11 @@ async function fetchAndDisplayTranscript(): Promise<boolean> {
       transcript.length,
       "entries, displaying..."
     );
+    // Print first 5 entries to verify transcript content
+    console.log("Productive YouTube: Transcript preview (first 5 entries):");
+    transcript.slice(0, 5).forEach((entry, i) => {
+      console.log(`  [${i}] ${entry.start.toFixed(1)}s: "${entry.text}"`);
+    });
     displayTranscript(transcript);
     return true; // Success!
   } catch (error) {

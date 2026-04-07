@@ -1,5 +1,79 @@
 // API functions for fetching transcript data
 
+/**
+ * Extract ytInitialPlayerResponse from page script tags.
+ * Content scripts can't access window.ytInitialPlayerResponse directly
+ * due to Chrome's isolated world, but they CAN read script tag innerHTML.
+ */
+export function extractPlayerResponseFromScripts(videoId: string): any | null {
+  const scripts = document.querySelectorAll("script");
+  for (const script of scripts) {
+    const content = script.textContent || "";
+    const markers = [
+      "var ytInitialPlayerResponse = ",
+      "ytInitialPlayerResponse = ",
+    ];
+    for (const marker of markers) {
+      const markerIndex = content.indexOf(marker);
+      if (markerIndex === -1) continue;
+
+      const jsonStartIndex = content.indexOf("{", markerIndex + marker.length);
+      if (jsonStartIndex === -1) continue;
+
+      try {
+        const jsonStr = extractCompleteJson(content, jsonStartIndex);
+        if (!jsonStr) continue;
+
+        const parsed = JSON.parse(jsonStr);
+        // Verify it matches the current video
+        if (parsed?.videoDetails?.videoId === videoId) {
+          console.log(
+            "Productive YouTube: Successfully extracted player response from script tag"
+          );
+          return parsed;
+        }
+      } catch {
+        // JSON parse failed, try next marker
+      }
+    }
+  }
+  return null;
+}
+
+/** Extract a complete JSON object from a string starting at the given index */
+function extractCompleteJson(content: string, startIndex: number): string | null {
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let i = startIndex; i < content.length; i++) {
+    const char = content[i];
+
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (char === "\\") {
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+
+    if (char === "{") depth++;
+    else if (char === "}") {
+      depth--;
+      if (depth === 0) {
+        return content.substring(startIndex, i + 1);
+      }
+    }
+  }
+  return null;
+}
+
 export async function fetchVideoPage(videoId: string): Promise<string> {
   console.log(`Fetching video page for video ID: ${videoId}`);
   const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
@@ -46,19 +120,19 @@ export async function fetchPlayerApi(
 ): Promise<any> {
   console.log("Productive YouTube: Fetching player API response...");
   const response = await fetch(
-    `https://www.youtube.com/youtubei/v1/player?key=${apiKey}`,
+    `https://www.youtube.com/youtubei/v1/player?key=${apiKey}&prettyPrint=false`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "com.google.android.youtube/20.10.38 (Linux; U; Android 14)",
       },
       body: JSON.stringify({
         context: {
           client: {
-            clientName: "WEB",
-            clientVersion: "2.20240101.00.00",
+            clientName: "ANDROID",
+            clientVersion: "20.10.38",
           },
         },
         videoId: videoId,
@@ -152,15 +226,40 @@ export function extractTranscriptUrl(playerApiResponse: any): string | null {
 
 export async function fetchTranscriptXml(url: string): Promise<string> {
   try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // Route through background script to use proper User-Agent and avoid CORS
+    const response = await new Promise<{ success: boolean; data?: string; error?: string }>(
+      (resolve) => {
+        chrome.runtime.sendMessage(
+          { type: "FETCH_TRANSCRIPT", url },
+          (resp) => {
+            if (chrome.runtime.lastError) {
+              resolve({ success: false, error: chrome.runtime.lastError.message });
+            } else {
+              resolve(resp);
+            }
+          }
+        );
+      }
+    );
+
+    if (!response.success || !response.data) {
+      console.warn(
+        "Productive YouTube: Background fetch failed, trying direct fetch...",
+        response.error
+      );
+      // Fallback to direct fetch
+      const directResponse = await fetch(url);
+      if (!directResponse.ok) {
+        throw new Error(`HTTP error! status: ${directResponse.status}`);
+      }
+      const text = await directResponse.text();
+      if (!text) {
+        throw new Error("Empty transcript response from direct fetch");
+      }
+      return text;
     }
-    const text = await response.text();
-    if (!text) {
-      throw new Error("Empty transcript response");
-    }
-    return text;
+
+    return response.data;
   } catch (error) {
     console.error("Productive YouTube: Error fetching transcript XML:", error);
     throw error;

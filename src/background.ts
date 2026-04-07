@@ -1,6 +1,15 @@
 // Background service worker for handling API calls (bypasses CORS)
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+  if (request.type === "FETCH_TRANSCRIPT") {
+    handleTranscriptFetch(request.url)
+      .then(sendResponse)
+      .catch((error) => {
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Keep message channel open for async response
+  }
+
   if (request.type === "TRANSLATE_TEXT") {
     handleTranslation(request.text)
       .then(sendResponse)
@@ -221,6 +230,33 @@ async function handleAIServiceOpen(aiService: AIService, content: string) {
     return {
       success: false,
       error: error instanceof Error ? error.message : `Failed to open ${aiService}`,
+    };
+  }
+}
+
+async function handleTranscriptFetch(url: string) {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "com.google.android.youtube/20.10.38 (Linux; U; Android 14)",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const text = await response.text();
+    if (!text || text.trim().length === 0) {
+      throw new Error("Empty transcript response from YouTube");
+    }
+
+    return { success: true, data: text };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Transcript fetch failed",
     };
   }
 }

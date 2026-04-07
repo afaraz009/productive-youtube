@@ -299,7 +299,7 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
       </div>
 
       <div className="text-xs text-slate-500 text-center mt-4 pt-3 border-t border-slate-200">
-        Version 2.0.1 • Built for focus 💙
+        Version 2.0.3 • Built for focus 💙
       </div>
     </div>
   );
