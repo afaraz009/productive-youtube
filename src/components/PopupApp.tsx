@@ -32,11 +32,11 @@ const ToggleSwitch: React.FC<{
   return (
     <div className="flex items-start justify-between py-3 group">
       <div className="flex-1 pr-3">
-        <span className="text-sm font-medium text-slate-900 block">
+        <span className="text-sm font-medium text-slate-900 dark:text-slate-100 block">
           {label}
         </span>
         {description && (
-          <span className="text-xs text-slate-500 mt-1 block leading-relaxed">
+          <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block leading-relaxed">
             {description}
           </span>
         )}
@@ -52,7 +52,7 @@ const ToggleSwitch: React.FC<{
           onChange={(e) => onChange(e.target.checked)}
           className="sr-only peer"
         />
-        <div className="w-10 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-blue-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-slate-400 after:border-2 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-blue-500 peer-checked:to-blue-600 shadow-sm"></div>
+        <div className="w-10 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-blue-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-slate-400 dark:after:border-slate-500 after:border-2 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-blue-500 peer-checked:to-blue-600 shadow-sm"></div>
       </label>
     </div>
   );
@@ -162,8 +162,8 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
   const [showAISettings, setShowAISettings] = useState(false);
 
   return (
-    <div className="w-96 max-h-[600px] pb-5 overflow-y-auto font-sans text-sm bg-gradient-to-br from-slate-50 to-blue-50/30">
-      <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-blue-700 border-b border-blue-800 px-4 py-3.5 shadow-md">
+    <div className="w-96 max-h-[600px] pb-5 overflow-y-auto font-sans text-sm bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-slate-950">
+      <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-900 border-b border-blue-800 dark:border-blue-950 px-4 py-3.5 shadow-md">
         <h1 className="text-sm font-bold text-white">Productive YouTube</h1>
         <p className="text-xs text-blue-100 mt-1">
           Enhance your focus and productivity
@@ -209,15 +209,15 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
       </div>
 
       {/* AI Settings Section */}
-      <div className="px-4 pt-3 border-t border-slate-200">
+      <div className="px-4 pt-3 border-t border-slate-200 dark:border-slate-700">
         <button
           onClick={() => setShowAISettings(!showAISettings)}
           className="w-full flex items-center justify-between py-2 text-left"
         >
-          <span className="text-sm font-semibold text-slate-900">
+          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
             AI Settings
           </span>
-          <span className="text-slate-500 transition-transform" style={{
+          <span className="text-slate-500 dark:text-slate-400 transition-transform" style={{
             transform: showAISettings ? 'rotate(180deg)' : 'rotate(0deg)'
           }}>
             ▼
@@ -228,13 +228,13 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
           <div className="space-y-4 pb-3">
             {/* AI Service Selector */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-2">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
                 AI Service
               </label>
               <select
                 value={settings.aiService}
                 onChange={(e) => handleAIServiceChange(e.target.value as AIService)}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
               >
                 <option value="chatgpt">ChatGPT</option>
                 <option value="gemini">Google Gemini</option>
@@ -245,40 +245,40 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
 
             {/* Translate Prompt */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-2">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Translation Prompt
               </label>
               <textarea
                 value={settings.aiPrompts.translate}
                 onChange={(e) => handlePromptChange('translate', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
               />
             </div>
 
             {/* Summarize Prompt */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-2">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Summary Prompt
               </label>
               <textarea
                 value={settings.aiPrompts.summarize}
                 onChange={(e) => handlePromptChange('summarize', e.target.value)}
                 rows={6}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono"
+                className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
               />
             </div>
 
             {/* Vocabulary Prompt */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-2">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Vocabulary Prompt
               </label>
               <textarea
                 value={settings.aiPrompts.vocabulary}
                 onChange={(e) => handlePromptChange('vocabulary', e.target.value)}
                 rows={2}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
               />
             </div>
 
@@ -290,7 +290,7 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
                 handlePromptChange('summarize', defaultSettings.aiPrompts.summarize);
                 handlePromptChange('vocabulary', defaultSettings.aiPrompts.vocabulary);
               }}
-              className="w-full px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+              className="w-full px-3 py-2 text-xs font-medium text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
             >
               Reset to Defaults
             </button>
@@ -298,7 +298,7 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
         )}
       </div>
 
-      <div className="text-xs text-slate-500 text-center mt-4 pt-3 border-t border-slate-200">
+      <div className="text-xs text-slate-500 dark:text-slate-400 text-center mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
         Version 2.0.3 • Built for focus 💙
       </div>
     </div>

@@ -41,26 +41,39 @@ export function displayTranscript(transcript: { text: string; start: number }[])
     return;
   }
 
-  // Use a fixed-position wrapper so the transcript is completely independent of
-  // YouTube's sidebar layout. This avoids conflicts with the suggestion remover
-  // which hides ytd-watch-next-secondary-results-renderer (collapsing #secondary).
+  // Place the transcript inside YouTube's #secondary sidebar, above the suggestions.
+  // The suggestion remover hides individual suggestion elements but #secondary stays visible.
   let transcriptWrapper = document.getElementById("transcript-fixed-wrapper") as HTMLElement | null;
 
   if (!transcriptWrapper) {
-    // Position the transcript in the right sidebar area
     transcriptWrapper = document.createElement("div");
     transcriptWrapper.id = "transcript-fixed-wrapper";
     transcriptWrapper.style.cssText = `
-      position: fixed !important;
-      top: 80px !important;
-      right: 24px !important;
-      width: 402px !important;
+      width: 100% !important;
       max-height: calc(100vh - 100px) !important;
       z-index: 2000 !important;
       pointer-events: auto !important;
       overflow-y: auto !important;
     `;
-    document.body.appendChild(transcriptWrapper);
+
+    // Insert into #secondary or #secondary-inner so it sits above suggestions
+    const secondaryInner = document.querySelector("#secondary-inner") || document.querySelector("#secondary");
+    if (secondaryInner) {
+      secondaryInner.insertBefore(transcriptWrapper, secondaryInner.firstChild);
+    } else {
+      // Fallback to fixed positioning if sidebar not found
+      transcriptWrapper.style.cssText = `
+        position: fixed !important;
+        top: 80px !important;
+        right: 24px !important;
+        width: 402px !important;
+        max-height: calc(100vh - 100px) !important;
+        z-index: 2000 !important;
+        pointer-events: auto !important;
+        overflow-y: auto !important;
+      `;
+      document.body.appendChild(transcriptWrapper);
+    }
   }
 
   const secondary = transcriptWrapper;
@@ -139,19 +152,21 @@ export function displayTranscript(transcript: { text: string; start: number }[])
     container.id = "transcript-container";
     container.className = "transcript-container";
     // Add inline styles with !important flags to ensure visibility
+    const initialDark = isDarkMode();
+    const initialBorder = initialDark ? "rgba(60, 60, 60, 0.6)" : "rgba(229, 231, 235, 0.8)";
+    const initialShadow = initialDark
+      ? "0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 4px 12px -4px rgba(0, 0, 0, 0.3)"
+      : "0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 12px -4px rgba(0, 0, 0, 0.08)";
+    const initialBg = initialDark ? "rgba(0, 0, 0, 0.95)" : "rgba(255, 255, 255, 0.95)";
     container.style.cssText = `
-      background: transparent !important;
+      background: ${initialBg} !important;
       backdrop-filter: blur(16px) !important;
       -webkit-backdrop-filter: blur(16px) !important;
-      border: 3px solid #fff !important;
-
+      border: 1px solid ${initialBorder} !important;
       border-radius: 12px !important;
       margin-bottom: 1.5rem !important;
       margin-top: 1.5rem !important;
-      box-shadow: rgba(255, 255, 255, 0.9) 0px 6px 12px -2px,
-            rgba(255, 255, 255, 0.6) 0px 3px 7px -3px !important;
-
-
+      box-shadow: ${initialShadow} !important;
       width: 100% !important;
       max-width: 400px !important;
       z-index: 1000 !important;
@@ -937,12 +952,13 @@ function createTranscriptLine(lineData: any): HTMLElement {
 }
 
 function isDarkMode(): boolean {
-  return (
-    document.documentElement.classList.contains("dark") ||
-    document.querySelector("html")?.getAttribute("dark") !== null ||
-    document.body.style.backgroundColor === "rgb(19, 19, 19)" ||
-    document.body.style.backgroundColor === "#131313"
-  );
+  const html = document.querySelector("html");
+  if (html?.hasAttribute("dark")) return true;
+  if (document.documentElement.classList.contains("dark")) return true;
+  const bodyBg = document.body.style.backgroundColor;
+  if (bodyBg === "rgb(19, 19, 19)" || bodyBg === "#131313") return true;
+  if (html?.hasAttribute("light")) return false;
+  return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
 }
 
 function applyDarkModeStyles(
@@ -1045,10 +1061,28 @@ function setupDarkModeObserver(
     const currentDarkMode = isDarkMode();
     applyDarkModeStyles(currentDarkMode, container, header, content);
   });
-  bodyObserver.observe(document.body, { 
-    attributes: true, 
-    attributeFilter: ["style"] 
+  bodyObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["style"]
   });
+
+  if (window.matchMedia) {
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => {
+      const currentDarkMode = isDarkMode();
+      applyDarkModeStyles(currentDarkMode, container, header, content);
+      const textColor = currentDarkMode ? "#e5e7eb" : "#1f2937";
+      content.querySelectorAll(".transcript-chunk-paragraph").forEach((p) => {
+        (p as HTMLElement).style.color = textColor;
+      });
+      content.querySelectorAll(".transcript-segment").forEach((s) => {
+        const el = s as HTMLElement;
+        if (!el.classList.contains("active")) el.style.color = textColor;
+      });
+    };
+    if (mql.addEventListener) mql.addEventListener("change", onChange);
+    else if (mql.addListener) mql.addListener(onChange);
+  }
 }
 
 function setupVideoTimeTracking(content: HTMLElement): void {

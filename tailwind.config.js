@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: "class",
+  darkMode: "media",
   content: ["./src/**/*.{js,ts,jsx,tsx}", "./src/popup.html"],
   theme: {
     extend: {
