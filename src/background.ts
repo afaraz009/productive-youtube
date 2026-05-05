@@ -20,12 +20,13 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   }
 
   if (request.type === "OPEN_CHATGPT") {
-    handleChatGPTOpen(request.content)
+    // Backward compatibility for old calls, redirect to unified service
+    handleAIServiceOpen('chatgpt', request.content)
       .then(sendResponse)
       .catch((error) => {
         sendResponse({ success: false, error: error.message });
       });
-    return true; // Keep message channel open for async response
+    return true;
   }
 
   if (request.type === "OPEN_AI_SERVICE") {
@@ -34,9 +35,52 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       .catch((error) => {
         sendResponse({ success: false, error: error.message });
       });
-    return true; // Keep message channel open for async response
+    return true;
   }
 });
+
+/**
+ * Robustly injects a script into a tab once it's ready.
+ * Handles the race condition where a tab might complete before the listener is attached.
+ */
+async function injectAutomationWhenReady(tabId: number, scriptFile: string) {
+  const listener = async (updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+    if (updatedTabId === tabId && changeInfo.status === "complete") {
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          files: [scriptFile],
+        });
+        chrome.tabs.onUpdated.removeListener(listener);
+      } catch (err) {
+        console.error(`Failed to inject ${scriptFile}:`, err);
+        chrome.tabs.onUpdated.removeListener(listener);
+      }
+    }
+  };
+
+  chrome.tabs.onUpdated.addListener(listener);
+
+  // Check if tab is already complete (Race condition fix)
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (tab.status === "complete") {
+      await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: [scriptFile],
+      });
+      chrome.tabs.onUpdated.removeListener(listener);
+    }
+  } catch (err) {
+    // Tab might have been closed
+    chrome.tabs.onUpdated.removeListener(listener);
+  }
+
+  // Cleanup timeout to prevent orphaned listeners
+  setTimeout(() => {
+    chrome.tabs.onUpdated.removeListener(listener);
+  }, 30000);
+}
 
 async function handleTranslation(text: string) {
   try {
@@ -75,65 +119,6 @@ async function handleTranslation(text: string) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Translation failed",
-    };
-  }
-}
-
-async function handleChatGPTOpen(content: string) {
-  try {
-    // Store content in chrome.storage for the automation script to retrieve
-    await chrome.storage.local.set({
-      chatgpt_content: {
-        content: content,
-        timestamp: Date.now(),
-      },
-    });
-
-    // Open ChatGPT in a new tab
-    const tab = await chrome.tabs.create({
-      url: "https://chatgpt.com/",
-      active: true,
-    });
-
-    if (!tab.id) {
-      throw new Error("Failed to create tab");
-    }
-
-    // Set up listener for when the tab finishes loading
-    const tabId = tab.id;
-    const listener = (
-      updatedTabId: number,
-      changeInfo: chrome.tabs.TabChangeInfo
-    ) => {
-      if (updatedTabId === tabId && changeInfo.status === "complete") {
-        // Inject the automation script
-        chrome.scripting
-          .executeScript({
-            target: { tabId: tabId },
-            files: ["chatgpt_automation.js"],
-          })
-          .then(() => {
-            // Clean up listener
-            chrome.tabs.onUpdated.removeListener(listener);
-          })
-          .catch(() => {
-            chrome.tabs.onUpdated.removeListener(listener);
-          });
-      }
-    };
-
-    chrome.tabs.onUpdated.addListener(listener);
-
-    // Clean up listener after 30 seconds if it hasn't fired
-    setTimeout(() => {
-      chrome.tabs.onUpdated.removeListener(listener);
-    }, 30000);
-
-    return { success: true };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to open ChatGPT",
     };
   }
 }
@@ -195,35 +180,8 @@ async function handleAIServiceOpen(aiService: AIService, content: string) {
       throw new Error("Failed to create tab");
     }
 
-    // Set up listener for when the tab finishes loading
-    const tabId = tab.id;
-    const listener = (
-      updatedTabId: number,
-      changeInfo: chrome.tabs.TabChangeInfo
-    ) => {
-      if (updatedTabId === tabId && changeInfo.status === "complete") {
-        // Inject the automation script
-        chrome.scripting
-          .executeScript({
-            target: { tabId: tabId },
-            files: [config.scriptFile],
-          })
-          .then(() => {
-            // Clean up listener
-            chrome.tabs.onUpdated.removeListener(listener);
-          })
-          .catch(() => {
-            chrome.tabs.onUpdated.removeListener(listener);
-          });
-      }
-    };
-
-    chrome.tabs.onUpdated.addListener(listener);
-
-    // Clean up listener after 30 seconds if it hasn't fired
-    setTimeout(() => {
-      chrome.tabs.onUpdated.removeListener(listener);
-    }, 30000);
+    // Use our robust helper to inject the script
+    await injectAutomationWhenReady(tab.id, config.scriptFile);
 
     return { success: true };
   } catch (error) {
