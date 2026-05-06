@@ -5,11 +5,11 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build && npm run copy-files",
+    "build": "vite build && node scripts/post-build.mjs",
     "preview": "vite preview",
     "watch": "vite build --watch",
     "clean": "rimraf dist",
-    "copy-files": "node -e \"const fs=require('fs'); fs.copyFileSync('public/manifest.json','dist/manifest.json'); fs.mkdirSync('dist/icons',{recursive:true}); try{const iconFiles=['icon16.png','icon48.png','icon128.png']; iconFiles.forEach(f=>{if(fs.existsSync('public/icons/'+f)) fs.copyFileSync('public/icons/'+f,'dist/icons/'+f);}); fs.copyFileSync('dist/src/popup.html','dist/popup.html'); let html=fs.readFileSync('dist/popup.html','utf8'); html=html.replace('../popup.js','./popup.js').replace('../popup.css','./popup.css'); fs.writeFileSync('dist/popup.html',html); fs.rmSync('dist/src',{recursive:true});}catch(e){} console.log('Files copied successfully');\"",
+    "copy-files": "node scripts/post-build.mjs",
     "package": "npm run build && zip -r extension.zip dist/*"
   },
   "dependencies": {
