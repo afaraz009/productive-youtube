@@ -1,4 +1,4 @@
-import { settings } from "../settings";
+import { getSettings } from "../settings";
 import { VIDEO_SUGGESTIONS_SELECTORS } from "../selectors";
 
 // Generic restore function
@@ -21,6 +21,7 @@ function restoreElements(
 
 // Function to remove video suggestions in the right sidebar (excluding playlist content)
 export function removeVideoSuggestions(): void {
+  const settings = getSettings();
   if (!settings.removeWatchPageSuggestions) {
     restoreElements(
       VIDEO_SUGGESTIONS_SELECTORS,

@@ -1,10 +1,7 @@
 // Main content script - orchestrates all features
 
-// Import types
-import { Settings } from "./types";
-
 // Import settings management
-import { settings, loadSettings, updateSettings } from "./settings";
+import { initializeSettings, getSettings } from "./settings";
 
 // Import removers
 import { removeShorts, throttledRemoveShorts } from "./removers/shorts";
@@ -20,36 +17,42 @@ let lastVideoId: string | null = null;
 
 // Extended initialization to handle all features
 function initializeFullExtension(): void {
-  // Load settings and then initialize
-  loadSettings(function () {
-    // Apply all removals based on settings
-    applyAllRemovals();
+  // Initialize settings and then start the extension
+  initializeSettings(
+    () => {
+      // Apply all removals based on settings
+      applyAllRemovals();
 
-    // Create observer for dynamic content
-    const observer = new MutationObserver((mutations) => {
-      let shouldCheck = false;
-      mutations.forEach((mutation) => {
-        if (mutation.addedNodes.length > 0) {
-          for (let node of mutation.addedNodes) {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              shouldCheck = true;
-              break;
+      // Create observer for dynamic content
+      const observer = new MutationObserver((mutations) => {
+        let shouldCheck = false;
+        mutations.forEach((mutation) => {
+          if (mutation.addedNodes.length > 0) {
+            for (let node of mutation.addedNodes) {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                shouldCheck = true;
+                break;
+              }
             }
           }
+        });
+
+        if (shouldCheck) {
+          applyAllRemovalsThrottled();
         }
       });
 
-      if (shouldCheck) {
-        applyAllRemovalsThrottled();
-      }
-    });
-
-    // Start observing
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
-  });
+      // Start observing
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+    },
+    () => {
+      // If settings changed, apply them immediately
+      applyAllRemovals();
+    }
+  );
 }
 
 // Apply all removal functions based on current page
@@ -91,25 +94,6 @@ function applyAllRemovalsThrottled(): void {
     throttledRemoveHomepageVideos();
   }
 }
-
-// Listen for settings changes and apply them immediately
-chrome.storage.onChanged.addListener(function (changes, namespace) {
-  if (namespace === "local") {
-    let needsUpdate = false;
-
-    for (let key in changes) {
-      if (settings.hasOwnProperty(key)) {
-        updateSettings({ [key]: changes[key].newValue });
-        needsUpdate = true;
-      }
-    }
-
-    // If settings changed, apply them immediately
-    if (needsUpdate) {
-      applyAllRemovals();
-    }
-  }
-});
 
 // Handle YouTube SPA navigation
 function handleYouTubeNavigation(): void {

@@ -1,7 +1,8 @@
-import { settings } from "../settings";
+import { getSettings } from "../settings";
 
 // Function to remove Shorts button from sidebar
 export function removeShortsButton(): void {
+  const settings = getSettings();
   if (!settings.removeShortsButton) {
     // Restore by checking all possible containers
     const allContainers = document.querySelectorAll(

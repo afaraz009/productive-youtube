@@ -51,26 +51,54 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
   }
 };
 
-// Current settings instance - exported as mutable object
-export const settings: Settings = { ...defaultSettings };
+// Internal settings cache
+let settingsCache: Settings = { ...defaultSettings };
 
-// Load settings from storage
-export function loadSettings(callback?: () => void): void {
-  const keys = Object.keys(settings);
-  chrome.storage.local.get(keys, function (result) {
-    // Load all settings with defaults
-    keys.forEach((key) => {
-      if (result[key] !== undefined) {
-        settings[key as keyof Settings] = result[key];
+/**
+ * Returns a read-only snapshot of the current settings.
+ * This prevents accidental direct mutation from other files.
+ */
+export function getSettings(): Readonly<Settings> {
+  return Object.freeze({ ...settingsCache });
+}
+
+/**
+ * Loads settings from Chrome storage and initializes the sync listener.
+ * This should be called once at the start of the content script.
+ */
+export function initializeSettings(onLoadCallback?: () => void, onUpdateCallback?: (newSettings: Readonly<Settings>) => void): void {
+  const keys = Object.keys(defaultSettings);
+  
+  chrome.storage.local.get(keys, (result) => {
+    Object.assign(settingsCache, result);
+    
+    // Set up listener for future changes
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+      if (namespace === "local") {
+        let hasRelevantChanges = false;
+        const newSettings = { ...settingsCache };
+
+        for (const [key, change] of Object.entries(changes)) {
+          if (key in defaultSettings) {
+            (newSettings as any)[key] = change.newValue;
+            hasRelevantChanges = true;
+          }
+        }
+
+        if (hasRelevantChanges) {
+          settingsCache = newSettings;
+          if (onUpdateCallback) onUpdateCallback(getSettings());
+        }
       }
     });
 
-    if (callback) callback();
+    if (onLoadCallback) onLoadCallback();
   });
 }
 
-// Update settings (for internal use)
-export function updateSettings(newSettings: Partial<Settings>): void {
-  // Mutate the existing object instead of reassigning
-  Object.assign(settings, newSettings);
+/**
+ * Updates a specific setting in storage.
+ */
+export async function updateSetting<K extends keyof Settings>(key: K, value: Settings[K]): Promise<void> {
+  await chrome.storage.local.set({ [key]: value });
 }

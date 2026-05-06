@@ -1,8 +1,9 @@
 // Background service worker for handling API calls (bypasses CORS)
+import { MessageType, MessagePayload } from "./scripts/messaging";
 
-chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-  if (request.type === "FETCH_TRANSCRIPT") {
-    handleTranscriptFetch(request.url)
+chrome.runtime.onMessage.addListener((request: MessagePayload, _sender, sendResponse) => {
+  if (request.type === MessageType.FETCH_TRANSCRIPT) {
+    handleTranscriptFetch(request.url!)
       .then(sendResponse)
       .catch((error) => {
         sendResponse({ success: false, error: error.message });
@@ -10,8 +11,8 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true; // Keep message channel open for async response
   }
 
-  if (request.type === "TRANSLATE_TEXT") {
-    handleTranslation(request.text)
+  if (request.type === MessageType.TRANSLATE_TEXT) {
+    handleTranslation(request.text!)
       .then(sendResponse)
       .catch((error) => {
         sendResponse({ success: false, error: error.message });
@@ -19,9 +20,9 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true; // Keep message channel open for async response
   }
 
-  if (request.type === "OPEN_CHATGPT") {
+  if (request.type === MessageType.OPEN_CHATGPT) {
     // Backward compatibility for old calls, redirect to unified service
-    handleAIServiceOpen('chatgpt', request.content)
+    handleAIServiceOpen('chatgpt', request.content!)
       .then(sendResponse)
       .catch((error) => {
         sendResponse({ success: false, error: error.message });
@@ -29,8 +30,8 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true;
   }
 
-  if (request.type === "OPEN_AI_SERVICE") {
-    handleAIServiceOpen(request.aiService, request.content)
+  if (request.type === MessageType.OPEN_AI_SERVICE) {
+    handleAIServiceOpen(request.aiService!, request.content!)
       .then(sendResponse)
       .catch((error) => {
         sendResponse({ success: false, error: error.message });

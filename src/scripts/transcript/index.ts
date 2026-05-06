@@ -1,4 +1,4 @@
-import { settings } from "../settings";
+import { getSettings } from "../settings";
 import { getVideoId } from "./utils";
 import {
   fetchVideoPage,
@@ -35,6 +35,7 @@ export function cleanupTranscript(): void {
 }
 
 export async function showVideoTranscript(): Promise<void> {
+  const settings = getSettings();
   console.log(
     "Productive YouTube: showVideoTranscript called, showTranscript setting:",
     settings.showTranscript

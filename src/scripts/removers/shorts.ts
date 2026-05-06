@@ -1,8 +1,9 @@
-import { settings } from "../settings";
+import { getSettings } from "../settings";
 import { SHORTS_SELECTORS } from "../selectors";
 
 // Function to find and remove the Shorts section
 export function removeShorts(): void {
+  const settings = getSettings();
   // Check if feature is enabled
   if (!settings.removeShorts) {
     // If disabled, restore previously hidden elements

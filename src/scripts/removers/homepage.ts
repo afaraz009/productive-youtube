@@ -1,4 +1,4 @@
-import { settings } from "../settings";
+import { getSettings } from "../settings";
 import { HOMEPAGE_VIDEO_SELECTORS } from "../selectors";
 
 // Generic restore function
@@ -21,6 +21,7 @@ function restoreElements(
 
 // Function to remove all suggested videos from the homepage
 export function removeHomepageVideos(): void {
+  const settings = getSettings();
   // Check if feature is enabled
   if (!settings.removeHomepageVideos) {
     restoreElements(
