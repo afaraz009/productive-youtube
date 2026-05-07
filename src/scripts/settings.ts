@@ -2,6 +2,7 @@ import { Settings } from "./types";
 
 // Default settings
 const defaultSettings: Settings = {
+  mode: 'focus',
   removeShorts: true,
   removeShortsButton: true,
   removeHomepageVideos: true,

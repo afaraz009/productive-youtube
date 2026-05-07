@@ -6,6 +6,7 @@ export interface VideoInfo {
 }
 
 export type AIService = 'chatgpt' | 'gemini' | 'claude' | 'grok';
+export type ExtensionMode = 'focus' | 'learn' | 'relax';
 
 export interface AIPrompts {
   translate: string;
@@ -14,6 +15,9 @@ export interface AIPrompts {
 }
 
 export interface Settings {
+  // Extension Mode
+  mode: ExtensionMode;
+
   // Algorithm Blockers
   removeShorts: boolean;
   removeShortsButton: boolean;
