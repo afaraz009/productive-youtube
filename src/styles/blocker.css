@@ -1,0 +1,84 @@
+/* 
+  Static Blocker CSS 
+  This file is injected at 'document_start' to hide distracting elements 
+  instantly before they even render, preventing the "flicker" effect.
+*/
+
+/* 1. Shorts Blocking */
+ytd-reel-shelf-renderer,
+ytd-rich-shelf-renderer[is-shorts],
+[aria-label*="Shorts"],
+ytd-shells-renderer,
+#dismissible[class*="shorts"] {
+    display: none !important;
+}
+
+/* 2. Shorts Sidebar Button */
+ytd-guide-entry-renderer:has(a[href="/shorts"]),
+ytd-mini-guide-entry-renderer:has(a[href="/shorts"]),
+ytd-guide-entry-renderer:has([title="Shorts"]),
+ytd-mini-guide-entry-renderer:has([title="Shorts"]),
+a[href="/shorts"],
+a[title="Shorts"],
+#guide-icon[href*="/shorts"] {
+    display: none !important;
+}
+
+/* 3. Homepage Video Suggestions */
+ytd-browse[page-subtype="home"] ytd-rich-grid-renderer,
+ytd-browse[page-subtype="home"] ytd-rich-item-renderer,
+ytd-browse[page-subtype="home"] ytd-rich-grid-row {
+    display: none !important;
+}
+
+/* 4. Watch Page Suggestions (Right Sidebar) */
+#secondary-inner ytd-compact-video-renderer,
+#secondary-inner ytd-compact-playlist-renderer,
+#secondary-inner ytd-reel-shelf-renderer,
+ytd-watch-next-secondary-results-renderer,
+#related ytd-video-renderer,
+#related ytd-compact-video-renderer,
+#related ytd-reel-shelf-renderer {
+    display: none !important;
+}
+
+/* 5. Video End Wall Suggestions */
+.ytp-suggestion-set,
+.ytp-videowall-still,
+.ytp-show-tiles,
+div.ytp-pause-overlay {
+    display: none !important;
+}
+
+/* --- Toggle Overrides --- */
+/* These classes are added to the <html> tag via JS to "reveal" content if user disables a feature */
+
+html.show-shorts ytd-reel-shelf-renderer,
+html.show-shorts ytd-rich-shelf-renderer[is-shorts],
+html.show-shorts [aria-label*="Shorts"],
+html.show-shorts ytd-shells-renderer,
+html.show-shorts #dismissible[class*="shorts"] {
+    display: block !important;
+}
+
+html.show-shorts-button ytd-guide-entry-renderer:has(a[href="/shorts"]),
+html.show-shorts-button ytd-mini-guide-entry-renderer:has(a[href="/shorts"]),
+html.show-shorts-button a[href="/shorts"] {
+    display: flex !important;
+}
+
+html.show-homepage ytd-browse[page-subtype="home"] ytd-rich-grid-renderer,
+html.show-homepage ytd-browse[page-subtype="home"] ytd-rich-item-renderer,
+html.show-homepage ytd-browse[page-subtype="home"] ytd-rich-grid-row {
+    display: block !important;
+}
+
+html.show-suggestions #secondary-inner ytd-compact-video-renderer,
+html.show-suggestions #secondary-inner ytd-compact-playlist-renderer,
+html.show-suggestions #secondary-inner ytd-reel-shelf-renderer,
+html.show-suggestions ytd-watch-next-secondary-results-renderer,
+html.show-suggestions #related ytd-video-renderer,
+html.show-suggestions #related ytd-compact-video-renderer,
+html.show-suggestions #related ytd-reel-shelf-renderer {
+    display: block !important;
+}

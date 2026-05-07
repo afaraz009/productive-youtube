@@ -15,6 +15,7 @@ export default defineConfig({
         gemini_automation: "src/scripts/gemini-automation.ts",
         claude_automation: "src/scripts/claude-automation.ts",
         grok_automation: "src/scripts/grok-automation.ts",
+        blocker: "src/styles/blocker.css",
       },
       output: {
         entryFileNames: (chunkInfo) => {

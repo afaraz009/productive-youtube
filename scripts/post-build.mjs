@@ -67,6 +67,14 @@ async function runPostBuild() {
       console.log('🧹 Cleaned up redundant src directory.');
     }
 
+    // 5. Handle blocker.css (Vite might name it blocker-[hash].css)
+    const files = fs.readdirSync(DIST_DIR);
+    const blockerFile = files.find(f => f.startsWith('blocker') && f.endsWith('.css'));
+    if (blockerFile) {
+      fs.copyFileSync(path.join(DIST_DIR, blockerFile), path.join(DIST_DIR, 'blocker.css'));
+      console.log('🎨 blocker.css prepared.');
+    }
+
     console.log('✨ Post-build process completed successfully!');
   } catch (error) {
     console.error('❌ Post-build process failed:', error);

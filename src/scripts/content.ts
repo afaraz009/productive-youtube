@@ -20,6 +20,9 @@ function initializeFullExtension(): void {
   // Initialize settings and then start the extension
   initializeSettings(
     () => {
+      // Apply CSS overrides based on initial settings
+      updateCSSOverrides();
+      
       // Apply all removals based on settings
       applyAllRemovals();
 
@@ -49,10 +52,32 @@ function initializeFullExtension(): void {
       });
     },
     () => {
-      // If settings changed, apply them immediately
+      // If settings changed, update CSS overrides and apply removals
+      updateCSSOverrides();
       applyAllRemovals();
     }
   );
+}
+
+/**
+ * Updates classes on the HTML element to override the default CSS blocking
+ */
+function updateCSSOverrides(): void {
+  const settings = getSettings();
+  const html = document.documentElement;
+
+  // If a setting is FALSE, we add a class to SHOW that element (override the blocker.css)
+  if (!settings.removeShorts) html.classList.add('show-shorts');
+  else html.classList.remove('show-shorts');
+
+  if (!settings.removeShortsButton) html.classList.add('show-shorts-button');
+  else html.classList.remove('show-shorts-button');
+
+  if (!settings.removeHomepageVideos) html.classList.add('show-homepage');
+  else html.classList.remove('show-homepage');
+
+  if (!settings.removeWatchPageSuggestions) html.classList.add('show-suggestions');
+  else html.classList.remove('show-suggestions');
 }
 
 // Apply all removal functions based on current page
