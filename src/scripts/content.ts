@@ -29,27 +29,44 @@ function initializeFullExtension(): void {
       // Create observer for dynamic content
       const observer = new MutationObserver((mutations) => {
         let shouldCheck = false;
-        mutations.forEach((mutation) => {
+        
+        for (const mutation of mutations) {
           if (mutation.addedNodes.length > 0) {
-            for (let node of mutation.addedNodes) {
+            for (const node of mutation.addedNodes) {
               if (node.nodeType === Node.ELEMENT_NODE) {
+                const el = node as HTMLElement;
+                // Ignore small noise like progress bars, timestamps, or player controls
+                // which change thousands of times per session
+                if (el.classList.contains('ytp-progress-bar') || 
+                    el.classList.contains('ytp-time-display') ||
+                    el.tagName === 'SPAN' || 
+                    el.tagName === 'PATH') {
+                  continue;
+                }
+                
                 shouldCheck = true;
                 break;
               }
             }
           }
-        });
+          if (shouldCheck) break;
+        }
 
         if (shouldCheck) {
           applyAllRemovalsThrottled();
         }
       });
 
-      // Start observing
-      observer.observe(document.body, {
+      // Optimization: Watch the main app container instead of the whole body
+      // This ignores many background scripts and technical tags
+      const targetNode = document.querySelector('ytd-app') || document.body;
+      
+      observer.observe(targetNode, {
         childList: true,
         subtree: true,
       });
+      
+      console.log(`Productive YouTube: Observer started on <${targetNode.tagName.toLowerCase()}>`);
     },
     () => {
       // If settings changed, update CSS overrides and apply removals
