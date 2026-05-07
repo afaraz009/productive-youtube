@@ -150,7 +150,7 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
       newSettings.showTranscript = false;
     } else if (mode === 'learn') {
       newSettings.removeShorts = true;
-      newSettings.removeShortsButton = false;
+      newSettings.removeShortsButton = true;
       newSettings.removeHomepageVideos = true;
       newSettings.removeWatchPageSuggestions = false;
       newSettings.showTranscript = true;
@@ -299,6 +299,12 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
               label="Auto-Transcript"
               checked={settings.showTranscript}
               onChange={(val) => handleToggle("showTranscript", val)}
+            />
+            <ToggleSwitch
+              id="intent-wall-toggle"
+              label="Mental Intent Wall"
+              checked={settings.enableIntentWall}
+              onChange={(val) => handleToggle("enableIntentWall", val)}
             />
           </div>
         )}

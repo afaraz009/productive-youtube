@@ -8,6 +8,7 @@ import { removeShorts, throttledRemoveShorts } from "./removers/shorts";
 import { removeHomepageVideos, throttledRemoveHomepageVideos } from "./removers/homepage";
 import { removeVideoSuggestions, throttledRemoveVideoSuggestions } from "./removers/suggestions";
 import { removeShortsButton, throttledRemoveShortsButton } from "./removers/shortsButton";
+import { showIntentWall, removeIntentWall } from "./removers/intentWall";
 
 // Import transcript functionality
 import { showVideoTranscript, cleanupTranscript, isWatchPage, isHomePage } from "./transcript";
@@ -102,9 +103,11 @@ function applyAllRemovals(): void {
   // Always check these regardless of page
   removeShorts();
   removeShortsButton();
+  showIntentWall();
 
   // Page-specific removals
   if (isWatchPage()) {
+    removeIntentWall(); // Never show wall on watch page
     // Sync lastVideoId on initial load
     const urlParams = new URLSearchParams(window.location.search);
     const currentVideoId = urlParams.get("v");
@@ -127,6 +130,7 @@ function applyAllRemovals(): void {
 function applyAllRemovalsThrottled(): void {
   throttledRemoveShorts();
   throttledRemoveShortsButton();
+  showIntentWall();
 
   if (isWatchPage()) {
     throttledRemoveVideoSuggestions();
@@ -140,6 +144,7 @@ function applyAllRemovalsThrottled(): void {
 // Handle YouTube SPA navigation
 function handleYouTubeNavigation(): void {
   if (isWatchPage()) {
+    removeIntentWall();
     // Get current video ID from URL
     const urlParams = new URLSearchParams(window.location.search);
     const currentVideoId = urlParams.get("v");
@@ -155,11 +160,16 @@ function handleYouTubeNavigation(): void {
     }
 
     removeVideoSuggestions();
-  } else {
+  } else if (isHomePage()) {
     lastVideoId = null;
     cleanupTranscript(); // Remove transcript when navigating away from watch page
+    showIntentWall();
+  } else {
+    lastVideoId = null;
+    cleanupTranscript();
   }
 }
+
 
 // Initialize when DOM is ready
 if (document.readyState === "loading") {

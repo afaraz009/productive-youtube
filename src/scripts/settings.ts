@@ -8,6 +8,7 @@ const defaultSettings: Settings = {
   removeHomepageVideos: true,
   removeWatchPageSuggestions: true,
   showTranscript: false,
+  enableIntentWall: true,
 
   // AI Settings
   aiService: 'chatgpt',

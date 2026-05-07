@@ -1,4 +1,4 @@
-import { settings } from "../settings";
+import { getSettings } from "../settings";
 import { formatTimestamp, decodeHtmlEntities, cleanTranscriptText } from "./utils";
 
 function getVideoTitle(): string {

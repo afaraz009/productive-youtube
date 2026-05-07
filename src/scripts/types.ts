@@ -24,6 +24,7 @@ export interface Settings {
   removeHomepageVideos: boolean;
   removeWatchPageSuggestions: boolean;
   showTranscript: boolean;
+  enableIntentWall: boolean;
 
   // AI Settings
   aiService: AIService;
