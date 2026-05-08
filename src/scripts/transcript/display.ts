@@ -57,12 +57,12 @@ export function displayTranscript(
   if (!transcriptWrapper) {
     transcriptWrapper = document.createElement("div");
     transcriptWrapper.id = "transcript-fixed-wrapper";
-    // REMOVED: overflow-y: auto from here to prevent double scrollbars
     transcriptWrapper.style.cssText = `
       width: 100% !important;
+      max-height: calc(100vh - 100px) !important;
       z-index: 2000 !important;
       pointer-events: auto !important;
-      overflow: visible !important; 
+      overflow-y: auto !important;
     `;
 
     const secondaryInner =
@@ -76,9 +76,10 @@ export function displayTranscript(
         top: 80px !important;
         right: 24px !important;
         width: 402px !important;
+        max-height: calc(100vh - 100px) !important;
         z-index: 2000 !important;
         pointer-events: auto !important;
-        overflow: visible !important;
+        overflow-y: auto !important;
       `;
       document.body.appendChild(transcriptWrapper);
     }
@@ -269,8 +270,6 @@ function createTranscriptContent(): HTMLElement {
     padding: 1.5rem;
     background-color: transparent !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
   `;
 
   return content;
@@ -420,7 +419,9 @@ function createSyncButton(
 
     const video = document.querySelector("video");
     if (video) {
-      const activeSegment = content.querySelector(".transcript-segment.active") as HTMLElement;
+      const activeSegment = content.querySelector(
+        ".transcript-segment.active",
+      ) as HTMLElement;
       if (activeSegment) {
         const segmentTop = activeSegment.getBoundingClientRect().top;
         const contentTop = content.getBoundingClientRect().top;
@@ -444,7 +445,10 @@ function createTranslateButton(chunkedTranscript: any[]): HTMLElement {
   translateButton.className = "transcript-translate-button";
   translateButton.title = "Translate in AI";
 
-  const translateIconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const translateIconSvg = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "svg",
+  );
   translateIconSvg.setAttribute("width", "20");
   translateIconSvg.setAttribute("height", "20");
   translateIconSvg.setAttribute("viewBox", "0 0 24 24");
@@ -470,7 +474,10 @@ function createTranslateButton(chunkedTranscript: any[]): HTMLElement {
     const videoTitle = getVideoTitle();
     const videoUrl = window.location.href.split("&")[0];
     const transcriptText = chunkedTranscript
-      .map((chunk) => `[${formatTimestamp(chunk.start)}] ${chunk.lines.map((l: any) => l.text).join(" ")}`)
+      .map(
+        (chunk) =>
+          `[${formatTimestamp(chunk.start)}] ${chunk.lines.map((l: any) => l.text).join(" ")}`,
+      )
       .join("\n\n");
 
     const completeText = `${settings.aiPrompts.translate}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
@@ -491,9 +498,12 @@ function createSummaryButton(chunkedTranscript: any[]): HTMLElement {
   summaryButton.title = "Summarize in AI";
 
   const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  icon.setAttribute("width", "20"); icon.setAttribute("height", "20");
-  icon.setAttribute("viewBox", "0 0 24 24"); icon.setAttribute("fill", "none");
-  icon.setAttribute("stroke", "currentColor"); icon.setAttribute("stroke-width", "2");
+  icon.setAttribute("width", "20");
+  icon.setAttribute("height", "20");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("fill", "none");
+  icon.setAttribute("stroke", "currentColor");
+  icon.setAttribute("stroke-width", "2");
   icon.innerHTML = `<line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>`;
   summaryButton.appendChild(icon);
 
@@ -509,7 +519,10 @@ function createSummaryButton(chunkedTranscript: any[]): HTMLElement {
     const videoTitle = getVideoTitle();
     const videoUrl = window.location.href.split("&")[0];
     const transcriptText = chunkedTranscript
-      .map((chunk) => `[${formatTimestamp(chunk.start)}] ${chunk.lines.map((l: any) => l.text).join(" ")}`)
+      .map(
+        (chunk) =>
+          `[${formatTimestamp(chunk.start)}] ${chunk.lines.map((l: any) => l.text).join(" ")}`,
+      )
       .join("\n\n");
 
     const completeText = `${settings.aiPrompts.summarize}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
@@ -530,9 +543,12 @@ function createVocabularyButton(chunkedTranscript: any[]): HTMLElement {
   vocabularyButton.title = "Vocabulary Table in AI";
 
   const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  icon.setAttribute("width", "20"); icon.setAttribute("height", "20");
-  icon.setAttribute("viewBox", "0 0 24 24"); icon.setAttribute("fill", "none");
-  icon.setAttribute("stroke", "currentColor"); icon.setAttribute("stroke-width", "2");
+  icon.setAttribute("width", "20");
+  icon.setAttribute("height", "20");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("fill", "none");
+  icon.setAttribute("stroke", "currentColor");
+  icon.setAttribute("stroke-width", "2");
   icon.innerHTML = `<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path><line x1="10" y1="8" x2="16" y2="8"></line><line x1="10" y1="12" x2="16" y2="12"></line><line x1="10" y1="16" x2="14" y2="16"></line>`;
   vocabularyButton.appendChild(icon);
 
@@ -548,7 +564,10 @@ function createVocabularyButton(chunkedTranscript: any[]): HTMLElement {
     const videoTitle = getVideoTitle();
     const videoUrl = window.location.href.split("&")[0];
     const transcriptText = chunkedTranscript
-      .map((chunk) => `[${formatTimestamp(chunk.start)}] ${chunk.lines.map((l: any) => l.text).join(" ")}`)
+      .map(
+        (chunk) =>
+          `[${formatTimestamp(chunk.start)}] ${chunk.lines.map((l: any) => l.text).join(" ")}`,
+      )
       .join("\n\n");
 
     const completeText = `${settings.aiPrompts.vocabulary}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
@@ -626,7 +645,8 @@ function createChunkParagraph(chunk: any): HTMLElement {
       if (video) video.currentTime = lineData.start;
     };
     paragraphEl.appendChild(span);
-    if (index < chunk.lines.length - 1) paragraphEl.appendChild(document.createTextNode(" "));
+    if (index < chunk.lines.length - 1)
+      paragraphEl.appendChild(document.createTextNode(" "));
   });
 
   return paragraphEl;
@@ -638,7 +658,10 @@ function isDarkMode(): boolean {
   if (document.documentElement.classList.contains("dark")) return true;
   const bodyBg = document.body.style.backgroundColor;
   if (bodyBg === "rgb(19, 19, 19)" || bodyBg === "#131313") return true;
-  return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  return !!(
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  );
 }
 
 function applyDarkModeStyles(
@@ -648,34 +671,49 @@ function applyDarkModeStyles(
   content: HTMLElement,
 ): void {
   const settings = getSettings();
-  const maxHeight = settings.removeWatchPageSuggestions ? "calc(100vh - 180px)" : "24rem";
+  const maxHeight = settings.removeWatchPageSuggestions
+    ? "calc(100vh - 180px)"
+    : "24rem";
 
   if (isDark) {
     container.style.background = "rgba(0, 0, 0, 0.95)";
     container.style.border = "1px solid rgba(60, 60, 60, 0.6)";
     header.style.background = "rgba(30, 30, 30, 0.8)";
     header.style.borderBottom = "1px solid rgba(60, 60, 60, 0.6)";
-    (header.querySelector(".transcript-title") as HTMLElement).style.color = "#e5e7eb";
+    (header.querySelector(".transcript-title") as HTMLElement).style.color =
+      "#e5e7eb";
   } else {
     container.style.background = "rgba(255, 255, 255, 0.95)";
     container.style.border = "1px solid rgba(229, 231, 235, 0.8)";
     header.style.background = "rgba(249, 250, 251, 0.8)";
     header.style.borderBottom = "1px solid rgba(229, 231, 235, 0.6)";
-    (header.querySelector(".transcript-title") as HTMLElement).style.color = "#1f2937";
+    (header.querySelector(".transcript-title") as HTMLElement).style.color =
+      "#1f2937";
   }
   content.style.maxHeight = maxHeight;
 }
 
-function setupDarkModeObserver(container: HTMLElement, header: HTMLElement, content: HTMLElement): void {
+function setupDarkModeObserver(
+  container: HTMLElement,
+  header: HTMLElement,
+  content: HTMLElement,
+): void {
   const observer = new MutationObserver(() => {
     const isDark = isDarkMode();
     applyDarkModeStyles(isDark, container, header, content);
     const textColor = isDark ? "#e5e7eb" : "#1f2937";
-    content.querySelectorAll(".transcript-chunk-paragraph, .transcript-segment:not(.active)").forEach((el) => {
-      (el as HTMLElement).style.color = textColor;
-    });
+    content
+      .querySelectorAll(
+        ".transcript-chunk-paragraph, .transcript-segment:not(.active)",
+      )
+      .forEach((el) => {
+        (el as HTMLElement).style.color = textColor;
+      });
   });
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
   observer.observe(document.body, { attributes: true });
 }
 
@@ -689,25 +727,31 @@ function setupVideoTimeTracking(
 ): void {
   const markUserScroll = () => {
     if (transcriptScrollState.isUserScrolling) return; // Already true
-    
+
     transcriptScrollState.isUserScrolling = true;
-    
+
     // VISUAL FEEDBACK: Highlight the sync button so user knows how to resume
     syncButton.style.color = "#f59e0b"; // Orange/Amber
     syncButton.style.background = "rgba(245, 158, 11, 0.1)";
     syncButton.title = "Auto-scroll PAUSED. Click to resume.";
-    console.log("Productive YouTube: Auto-scroll paused due to manual interaction.");
+    console.log(
+      "Productive YouTube: Auto-scroll paused due to manual interaction.",
+    );
   };
 
   content.addEventListener("wheel", markUserScroll, { passive: true });
   content.addEventListener("touchstart", markUserScroll, { passive: true });
   content.addEventListener("mousedown", markUserScroll, { passive: true });
-  
-  content.addEventListener("scroll", () => {
-    if (!transcriptScrollState.ignoreProgrammaticScroll) {
-      markUserScroll();
-    }
-  }, { passive: true });
+
+  content.addEventListener(
+    "scroll",
+    () => {
+      if (!transcriptScrollState.ignoreProgrammaticScroll) {
+        markUserScroll();
+      }
+    },
+    { passive: true },
+  );
 
   const video = document.querySelector("video");
   if (video) {
@@ -727,7 +771,9 @@ function setupVideoTimeTracking(
         if (currentTime >= start && currentTime < end) {
           segmentEl.classList.add("active");
           activeSegment = segmentEl;
-          segmentEl.style.backgroundColor = isCurrentlyDarkMode ? "rgba(59, 130, 246, 0.4)" : "rgba(59, 130, 246, 0.25)";
+          segmentEl.style.backgroundColor = isCurrentlyDarkMode
+            ? "rgba(59, 130, 246, 0.4)"
+            : "rgba(59, 130, 246, 0.25)";
           segmentEl.style.color = isCurrentlyDarkMode ? "#93c5fd" : "#1e40af";
           segmentEl.style.fontWeight = "600";
           segmentEl.style.padding = "0.125rem 0.25rem";
@@ -746,8 +792,7 @@ function setupVideoTimeTracking(
         const segmentTop = activeSegment.getBoundingClientRect().top;
         const contentTop = content.getBoundingClientRect().top;
         const relativeTop = segmentTop - contentTop + content.scrollTop;
-        const containerHeight = content.clientHeight;
-        const scrollPosition = relativeTop - containerHeight / 2;
+        const scrollPosition = relativeTop - content.clientHeight / 2;
 
         transcriptScrollState.ignoreProgrammaticScroll = true;
         content.scrollTo({ top: scrollPosition, behavior: "smooth" });
