@@ -1,14 +1,18 @@
 import { getSettings } from "../settings";
-import { formatTimestamp, decodeHtmlEntities, cleanTranscriptText } from "./utils";
+import {
+  formatTimestamp,
+  decodeHtmlEntities,
+  cleanTranscriptText,
+} from "./utils";
 
 function getVideoTitle(): string {
   // Try multiple selectors to get the video title
   const titleSelectors = [
-    'h1.ytd-watch-metadata yt-formatted-string',
-    'h1.ytd-video-primary-info-renderer',
-    'h1.title.ytd-video-primary-info-renderer',
-    'ytd-watch-metadata h1',
-    'h1 yt-formatted-string'
+    "h1.ytd-watch-metadata yt-formatted-string",
+    "h1.ytd-video-primary-info-renderer",
+    "h1.title.ytd-video-primary-info-renderer",
+    "ytd-watch-metadata h1",
+    "h1 yt-formatted-string",
   ];
 
   for (const selector of titleSelectors) {
@@ -20,57 +24,61 @@ function getVideoTitle(): string {
 
   // Fallback: try to get from document title
   const docTitle = document.title;
-  if (docTitle && docTitle !== 'YouTube') {
+  if (docTitle && docTitle !== "YouTube") {
     // Remove " - YouTube" suffix if present
-    return docTitle.replace(/ - YouTube$/, '').trim();
+    return docTitle.replace(/ - YouTube$/, "").trim();
   }
 
-  return 'Video Title Not Found';
+  return "Video Title Not Found";
 }
 
-export function displayTranscript(transcript: { text: string; start: number }[]): void {
+export function displayTranscript(
+  transcript: { text: string; start: number }[],
+): void {
   console.log(
     "Productive YouTube: displayTranscript function called with",
     transcript.length,
-    "entries"
+    "entries",
   );
 
   // Check if we're on a watch page
-  if (!window.location.pathname.includes('/watch')) {
-    console.log("Productive YouTube: Not on watch page, skipping transcript display");
+  if (!window.location.pathname.includes("/watch")) {
+    console.log(
+      "Productive YouTube: Not on watch page, skipping transcript display",
+    );
     return;
   }
 
   // Place the transcript inside YouTube's #secondary sidebar, above the suggestions.
-  // The suggestion remover hides individual suggestion elements but #secondary stays visible.
-  let transcriptWrapper = document.getElementById("transcript-fixed-wrapper") as HTMLElement | null;
+  let transcriptWrapper = document.getElementById(
+    "transcript-fixed-wrapper",
+  ) as HTMLElement | null;
 
   if (!transcriptWrapper) {
     transcriptWrapper = document.createElement("div");
     transcriptWrapper.id = "transcript-fixed-wrapper";
+    // REMOVED: overflow-y: auto from here to prevent double scrollbars
     transcriptWrapper.style.cssText = `
       width: 100% !important;
-      max-height: calc(100vh - 100px) !important;
       z-index: 2000 !important;
       pointer-events: auto !important;
-      overflow-y: auto !important;
+      overflow: visible !important; 
     `;
 
-    // Insert into #secondary or #secondary-inner so it sits above suggestions
-    const secondaryInner = document.querySelector("#secondary-inner") || document.querySelector("#secondary");
+    const secondaryInner =
+      document.querySelector("#secondary-inner") ||
+      document.querySelector("#secondary");
     if (secondaryInner) {
       secondaryInner.insertBefore(transcriptWrapper, secondaryInner.firstChild);
     } else {
-      // Fallback to fixed positioning if sidebar not found
       transcriptWrapper.style.cssText = `
         position: fixed !important;
         top: 80px !important;
         right: 24px !important;
         width: 402px !important;
-        max-height: calc(100vh - 100px) !important;
         z-index: 2000 !important;
         pointer-events: auto !important;
-        overflow-y: auto !important;
+        overflow: visible !important;
       `;
       document.body.appendChild(transcriptWrapper);
     }
@@ -79,16 +87,13 @@ export function displayTranscript(transcript: { text: string; start: number }[])
   const secondary = transcriptWrapper;
 
   if (!secondary) {
-    console.error("Productive YouTube: Could not find any suitable container for transcript - giving up");
+    console.error(
+      "Productive YouTube: Could not find any suitable container for transcript - giving up",
+    );
     return;
   }
 
-  console.log(
-    "Productive YouTube: Using container:",
-    secondary.tagName || secondary.id || "unknown"
-  );
-
-  // Group transcript entries into 25-second chunks with individual lines
+  // Group transcript entries
   const CHUNK_SIZE = 25; // seconds
   const chunkedTranscript: {
     start: number;
@@ -100,16 +105,11 @@ export function displayTranscript(transcript: { text: string; start: number }[])
   } | null = null;
 
   transcript.forEach((line, index) => {
-    // Decode HTML entities and clean the text
     let decodedText = decodeHtmlEntities(line.text);
     decodedText = cleanTranscriptText(decodedText);
-
-    // Skip if text is empty after cleaning
     if (!decodedText) return;
 
-    const chunkStart = Math.floor(line.start / CHUNK_SIZE) * CHUNK_SIZE; // Round down to nearest chunk
-
-    // Calculate duration for this line
+    const chunkStart = Math.floor(line.start / CHUNK_SIZE) * CHUNK_SIZE;
     const nextStart =
       index < transcript.length - 1
         ? transcript[index + 1].start
@@ -123,7 +123,6 @@ export function displayTranscript(transcript: { text: string; start: number }[])
     };
 
     if (!currentChunk || currentChunk.start !== chunkStart) {
-      // Start a new chunk
       if (currentChunk) {
         chunkedTranscript.push(currentChunk);
       }
@@ -132,32 +131,31 @@ export function displayTranscript(transcript: { text: string; start: number }[])
         lines: [lineData],
       };
     } else {
-      // Add to current chunk
       currentChunk.lines.push(lineData);
     }
   });
 
-  // Don't forget the last chunk
   if (currentChunk) {
     chunkedTranscript.push(currentChunk);
   }
 
   let container = document.getElementById("transcript-container");
   if (container) {
-    console.log("Productive YouTube: Reusing existing transcript container");
     container.innerHTML = "";
   } else {
-    console.log("Productive YouTube: Creating new transcript container");
     container = document.createElement("div");
     container.id = "transcript-container";
     container.className = "transcript-container";
-    // Add inline styles with !important flags to ensure visibility
     const initialDark = isDarkMode();
-    const initialBorder = initialDark ? "rgba(60, 60, 60, 0.6)" : "rgba(229, 231, 235, 0.8)";
+    const initialBorder = initialDark
+      ? "rgba(60, 60, 60, 0.6)"
+      : "rgba(229, 231, 235, 0.8)";
     const initialShadow = initialDark
       ? "0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 4px 12px -4px rgba(0, 0, 0, 0.3)"
       : "0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 12px -4px rgba(0, 0, 0, 0.08)";
-    const initialBg = initialDark ? "rgba(0, 0, 0, 0.95)" : "rgba(255, 255, 255, 0.95)";
+    const initialBg = initialDark
+      ? "rgba(0, 0, 0, 0.95)"
+      : "rgba(255, 255, 255, 0.95)";
     container.style.cssText = `
       background: ${initialBg} !important;
       backdrop-filter: blur(16px) !important;
@@ -177,9 +175,6 @@ export function displayTranscript(transcript: { text: string; start: number }[])
       overflow: hidden !important;
     `;
     secondary.prepend(container);
-    console.log(
-      "Productive YouTube: Transcript container created and inserted into DOM"
-    );
   }
 
   const header = createTranscriptHeader();
@@ -188,15 +183,23 @@ export function displayTranscript(transcript: { text: string; start: number }[])
   const content = createTranscriptContent();
   container.appendChild(content);
 
-  const { copyButton, syncButton } = setupHeaderButtons(header, chunkedTranscript, content);
+  const transcriptScrollState = {
+    isUserScrolling: false,
+    ignoreProgrammaticScroll: false,
+  };
+
+  const { syncButton } = setupHeaderButtons(
+    header,
+    chunkedTranscript,
+    content,
+    transcriptScrollState,
+  );
 
   setupHeaderToggle(header, content);
-
   renderTranscriptChunks(chunkedTranscript, content);
-
   applyDarkModeStyles(isDarkMode(), container, header, content);
   setupDarkModeObserver(container, header, content);
-  setupVideoTimeTracking(content);
+  setupVideoTimeTracking(content, transcriptScrollState, syncButton);
 }
 
 function createTranscriptHeader(): HTMLElement {
@@ -208,9 +211,9 @@ function createTranscriptHeader(): HTMLElement {
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem 1rem;
-    border-bottom: 1px solid ${isDark ? 'rgba(60, 60, 60, 0.6)' : 'rgba(229, 231, 235, 0.6)'};
+    border-bottom: 1px solid ${isDark ? "rgba(60, 60, 60, 0.6)" : "rgba(229, 231, 235, 0.6)"};
     cursor: pointer;
-    background: ${isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(249, 250, 251, 0.8)'};
+    background: ${isDark ? "rgba(30, 30, 30, 0.8)" : "rgba(249, 250, 251, 0.8)"};
     gap: 0.5rem;
   `;
 
@@ -254,6 +257,7 @@ function createTranscriptHeader(): HTMLElement {
 }
 
 function createTranscriptContent(): HTMLElement {
+  const settings = getSettings();
   const isFullHeight = settings.removeWatchPageSuggestions;
   const maxHeight = isFullHeight ? "calc(100vh - 180px)" : "24rem";
 
@@ -265,6 +269,8 @@ function createTranscriptContent(): HTMLElement {
     padding: 1.5rem;
     background-color: transparent !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
   `;
 
   return content;
@@ -273,12 +279,18 @@ function createTranscriptContent(): HTMLElement {
 function setupHeaderButtons(
   header: HTMLElement,
   chunkedTranscript: any[],
-  content: HTMLElement
+  content: HTMLElement,
+  transcriptScrollState: {
+    isUserScrolling: boolean;
+    ignoreProgrammaticScroll: boolean;
+  },
 ): { copyButton: HTMLElement; syncButton: HTMLElement } {
-  const headerButtons = header.querySelector(".transcript-header-buttons") as HTMLElement;
+  const headerButtons = header.querySelector(
+    ".transcript-header-buttons",
+  ) as HTMLElement;
 
   const copyButton = createCopyButton(chunkedTranscript);
-  const syncButton = createSyncButton(content);
+  const syncButton = createSyncButton(content, transcriptScrollState);
   const translateButton = createTranslateButton(chunkedTranscript);
   const summaryButton = createSummaryButton(chunkedTranscript);
   const vocabularyButton = createVocabularyButton(chunkedTranscript);
@@ -297,7 +309,10 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
   copyButton.className = "transcript-copy-button";
   copyButton.title = "Copy transcript to clipboard";
 
-  const copyIconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const copyIconSvg = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "svg",
+  );
   copyIconSvg.setAttribute("width", "20");
   copyIconSvg.setAttribute("height", "20");
   copyIconSvg.setAttribute("viewBox", "0 0 24 24");
@@ -317,12 +332,9 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
     color: #3b82f6;
     padding: 0.5rem;
     border-radius: 6px;
-    font-size: 20px;
-    font-weight: 600;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
     cursor: pointer;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -330,27 +342,10 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
     height: 40px;
   `;
 
-  copyButton.onmouseover = () => {
-    copyButton.style.background = "rgba(59, 130, 246, 0.1)";
-    copyButton.style.color = "#2563eb";
-    copyButton.style.transform = "scale(1.1)";
-  };
-  copyButton.onmouseout = () => {
-    copyButton.style.background = "transparent";
-    copyButton.style.color = "#3b82f6";
-    copyButton.style.transform = "scale(1)";
-  };
-
   copyButton.onclick = (e) => {
     e.stopPropagation();
-
-    // Get video title
     const videoTitle = getVideoTitle();
-
-    // Get video URL
-    const videoUrl = window.location.href.split('&')[0]; // Remove extra params
-
-    // Build transcript text
+    const videoUrl = window.location.href.split("&")[0];
     const transcriptText = chunkedTranscript
       .map((chunk) => {
         const chunkTimestamp = formatTimestamp(chunk.start);
@@ -359,25 +354,11 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
       })
       .join("\n\n");
 
-    // Format the complete text with title, URL, and transcript
     const completeText = `${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
-
     navigator.clipboard.writeText(completeText);
 
-    copyButton.style.background = "transparent";
     copyButton.style.color = "#10b981";
-    const svg = copyButton.querySelector("svg");
-    if (svg) {
-      svg.innerHTML = `<polyline points="20 6 9 17 4 12"></polyline>`;
-    }
     setTimeout(() => {
-      if (svg) {
-        svg.innerHTML = `
-          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-        `;
-      }
-      copyButton.style.background = "transparent";
       copyButton.style.color = "#3b82f6";
     }, 2000);
   };
@@ -385,12 +366,21 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
   return copyButton;
 }
 
-function createSyncButton(content: HTMLElement): HTMLElement {
+function createSyncButton(
+  content: HTMLElement,
+  transcriptScrollState: {
+    isUserScrolling: boolean;
+    ignoreProgrammaticScroll: boolean;
+  },
+): HTMLElement {
   const syncButton = document.createElement("button");
   syncButton.className = "transcript-sync-button";
-  syncButton.title = "Scroll to current timestamp";
+  syncButton.title = "Auto-scroll is ON. Click to sync.";
 
-  const syncIconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const syncIconSvg = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "svg",
+  );
   syncIconSvg.setAttribute("width", "20");
   syncIconSvg.setAttribute("height", "20");
   syncIconSvg.setAttribute("viewBox", "0 0 24 24");
@@ -411,12 +401,9 @@ function createSyncButton(content: HTMLElement): HTMLElement {
     color: #10b981;
     padding: 0.5rem;
     border-radius: 6px;
-    font-size: 20px;
-    font-weight: 600;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
     cursor: pointer;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -424,53 +411,27 @@ function createSyncButton(content: HTMLElement): HTMLElement {
     height: 40px;
   `;
 
-  syncButton.onmouseover = () => {
-    syncButton.style.background = "rgba(16, 185, 129, 0.1)";
-    syncButton.style.color = "#059669";
-    syncButton.style.transform = "scale(1.1)";
-  };
-  syncButton.onmouseout = () => {
-    syncButton.style.background = "transparent";
-    syncButton.style.color = "#10b981";
-    syncButton.style.transform = "scale(1)";
-  };
-
   syncButton.onclick = (e) => {
     e.stopPropagation();
+    transcriptScrollState.isUserScrolling = false;
+    syncButton.style.color = "#10b981";
+    syncButton.title = "Auto-scroll is ON. Click to sync.";
+    syncButton.style.background = "transparent";
+
     const video = document.querySelector("video");
     if (video) {
-      const currentTime = video.currentTime;
       const activeSegment = content.querySelector(".transcript-segment.active") as HTMLElement;
       if (activeSegment) {
         const segmentTop = activeSegment.getBoundingClientRect().top;
         const contentTop = content.getBoundingClientRect().top;
         const relativeTop = segmentTop - contentTop + content.scrollTop;
-        const containerHeight = content.clientHeight;
-        const scrollPosition = relativeTop - containerHeight / 2;
+        const scrollPosition = relativeTop - content.clientHeight / 2;
+
+        transcriptScrollState.ignoreProgrammaticScroll = true;
         content.scrollTo({ top: scrollPosition, behavior: "smooth" });
-      } else {
-        const segments = content.querySelectorAll(".transcript-segment");
-        let closestSegment: HTMLElement | null = null;
-        let minDiff = Infinity;
-
-        segments.forEach((segment) => {
-          const segmentEl = segment as HTMLElement;
-          const start = parseFloat(segmentEl.dataset.start || "0");
-          const diff = Math.abs(currentTime - start);
-          if (diff < minDiff) {
-            minDiff = diff;
-            closestSegment = segmentEl;
-          }
+        window.requestAnimationFrame(() => {
+          transcriptScrollState.ignoreProgrammaticScroll = false;
         });
-
-        if (closestSegment) {
-          const segmentTop = closestSegment.getBoundingClientRect().top;
-          const contentTop = content.getBoundingClientRect().top;
-          const relativeTop = segmentTop - contentTop + content.scrollTop;
-          const containerHeight = content.clientHeight;
-          const scrollPosition = relativeTop - containerHeight / 2;
-          content.scrollTo({ top: scrollPosition, behavior: "smooth" });
-        }
       }
     }
   };
@@ -481,7 +442,7 @@ function createSyncButton(content: HTMLElement): HTMLElement {
 function createTranslateButton(chunkedTranscript: any[]): HTMLElement {
   const translateButton = document.createElement("button");
   translateButton.className = "transcript-translate-button";
-  translateButton.title = "Translate transcript to Urdu in ChatGPT";
+  translateButton.title = "Translate in AI";
 
   const translateIconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   translateIconSvg.setAttribute("width", "20");
@@ -490,8 +451,6 @@ function createTranslateButton(chunkedTranscript: any[]): HTMLElement {
   translateIconSvg.setAttribute("fill", "none");
   translateIconSvg.setAttribute("stroke", "currentColor");
   translateIconSvg.setAttribute("stroke-width", "2");
-  translateIconSvg.setAttribute("stroke-linecap", "round");
-  translateIconSvg.setAttribute("stroke-linejoin", "round");
   translateIconSvg.innerHTML = `
     <circle cx="12" cy="12" r="10"></circle>
     <line x1="2" y1="12" x2="22" y2="12"></line>
@@ -500,82 +459,27 @@ function createTranslateButton(chunkedTranscript: any[]): HTMLElement {
   translateButton.appendChild(translateIconSvg);
 
   translateButton.style.cssText = `
-    background: transparent;
-    color: #8b5cf6;
-    padding: 0.5rem;
-    border-radius: 6px;
-    font-size: 20px;
-    font-weight: 600;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: none;
-    cursor: pointer;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
+    background: transparent; color: #8b5cf6; padding: 0.5rem; border-radius: 6px;
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; transition: all 0.3s ease;
   `;
-
-  translateButton.onmouseover = () => {
-    translateButton.style.background = "rgba(139, 92, 246, 0.1)";
-    translateButton.style.color = "#7c3aed";
-    translateButton.style.transform = "scale(1.1)";
-  };
-  translateButton.onmouseout = () => {
-    translateButton.style.background = "transparent";
-    translateButton.style.color = "#8b5cf6";
-    translateButton.style.transform = "scale(1)";
-  };
 
   translateButton.onclick = (e) => {
     e.stopPropagation();
-
-    // Get video title
+    const settings = getSettings();
     const videoTitle = getVideoTitle();
-
-    // Get video URL
-    const videoUrl = window.location.href.split('&')[0];
-
-    // Build transcript text
+    const videoUrl = window.location.href.split("&")[0];
     const transcriptText = chunkedTranscript
-      .map((chunk) => {
-        const chunkTimestamp = formatTimestamp(chunk.start);
-        const chunkText = chunk.lines.map((line: any) => line.text).join(" ");
-        return `[${chunkTimestamp}] ${chunkText}`;
-      })
+      .map((chunk) => `[${formatTimestamp(chunk.start)}] ${chunk.lines.map((l: any) => l.text).join(" ")}`)
       .join("\n\n");
 
-    // Format with translation prompt from settings
-    const prompt = settings.aiPrompts.translate;
-    const completeText = `${prompt}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
+    const completeText = `${settings.aiPrompts.translate}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
 
-    // Show loading state
-    translateButton.style.color = "#7c3aed";
-    const svg = translateButton.querySelector("svg");
-    if (svg) {
-      svg.style.opacity = "0.5";
-    }
-
-    // Send message to background script with AI service selection
-    chrome.runtime.sendMessage(
-      {
-        type: "OPEN_AI_SERVICE",
-        aiService: settings.aiService,
-        content: completeText,
-      },
-      (response) => {
-        // Reset button state
-        if (svg) {
-          svg.style.opacity = "1";
-        }
-        translateButton.style.color = "#8b5cf6";
-
-        if (response && !response.success) {
-          console.error("Failed to open AI service:", response.error);
-        }
-      }
-    );
+    chrome.runtime.sendMessage({
+      type: "OPEN_AI_SERVICE",
+      aiService: settings.aiService,
+      content: completeText,
+    });
   };
 
   return translateButton;
@@ -584,104 +488,37 @@ function createTranslateButton(chunkedTranscript: any[]): HTMLElement {
 function createSummaryButton(chunkedTranscript: any[]): HTMLElement {
   const summaryButton = document.createElement("button");
   summaryButton.className = "transcript-summary-button";
-  summaryButton.title = "Summarize transcript in ChatGPT";
+  summaryButton.title = "Summarize in AI";
 
-  const summaryIconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  summaryIconSvg.setAttribute("width", "20");
-  summaryIconSvg.setAttribute("height", "20");
-  summaryIconSvg.setAttribute("viewBox", "0 0 24 24");
-  summaryIconSvg.setAttribute("fill", "none");
-  summaryIconSvg.setAttribute("stroke", "currentColor");
-  summaryIconSvg.setAttribute("stroke-width", "2");
-  summaryIconSvg.setAttribute("stroke-linecap", "round");
-  summaryIconSvg.setAttribute("stroke-linejoin", "round");
-  summaryIconSvg.innerHTML = `
-    <line x1="8" y1="6" x2="21" y2="6"></line>
-    <line x1="8" y1="12" x2="21" y2="12"></line>
-    <line x1="8" y1="18" x2="21" y2="18"></line>
-    <line x1="3" y1="6" x2="3.01" y2="6"></line>
-    <line x1="3" y1="12" x2="3.01" y2="12"></line>
-    <line x1="3" y1="18" x2="3.01" y2="18"></line>
-  `;
-  summaryButton.appendChild(summaryIconSvg);
+  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  icon.setAttribute("width", "20"); icon.setAttribute("height", "20");
+  icon.setAttribute("viewBox", "0 0 24 24"); icon.setAttribute("fill", "none");
+  icon.setAttribute("stroke", "currentColor"); icon.setAttribute("stroke-width", "2");
+  icon.innerHTML = `<line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>`;
+  summaryButton.appendChild(icon);
 
   summaryButton.style.cssText = `
-    background: transparent;
-    color: #f59e0b;
-    padding: 0.5rem;
-    border-radius: 6px;
-    font-size: 20px;
-    font-weight: 600;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: none;
-    cursor: pointer;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
+    background: transparent; color: #f59e0b; padding: 0.5rem; border-radius: 6px;
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; transition: all 0.3s ease;
   `;
-
-  summaryButton.onmouseover = () => {
-    summaryButton.style.background = "rgba(245, 158, 11, 0.1)";
-    summaryButton.style.color = "#d97706";
-    summaryButton.style.transform = "scale(1.1)";
-  };
-  summaryButton.onmouseout = () => {
-    summaryButton.style.background = "transparent";
-    summaryButton.style.color = "#f59e0b";
-    summaryButton.style.transform = "scale(1)";
-  };
 
   summaryButton.onclick = (e) => {
     e.stopPropagation();
-
-    // Get video title
+    const settings = getSettings();
     const videoTitle = getVideoTitle();
-
-    // Get video URL
-    const videoUrl = window.location.href.split('&')[0];
-
-    // Build transcript text
+    const videoUrl = window.location.href.split("&")[0];
     const transcriptText = chunkedTranscript
-      .map((chunk) => {
-        const chunkTimestamp = formatTimestamp(chunk.start);
-        const chunkText = chunk.lines.map((line: any) => line.text).join(" ");
-        return `[${chunkTimestamp}] ${chunkText}`;
-      })
+      .map((chunk) => `[${formatTimestamp(chunk.start)}] ${chunk.lines.map((l: any) => l.text).join(" ")}`)
       .join("\n\n");
 
-    // Format with summary prompt from settings
-    const prompt = settings.aiPrompts.summarize;
-    const completeText = `${prompt}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
+    const completeText = `${settings.aiPrompts.summarize}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
 
-    // Show loading state
-    summaryButton.style.color = "#d97706";
-    const svg = summaryButton.querySelector("svg");
-    if (svg) {
-      svg.style.opacity = "0.5";
-    }
-
-    // Send message to background script with AI service selection
-    chrome.runtime.sendMessage(
-      {
-        type: "OPEN_AI_SERVICE",
-        aiService: settings.aiService,
-        content: completeText,
-      },
-      (response) => {
-        // Reset button state
-        if (svg) {
-          svg.style.opacity = "1";
-        }
-        summaryButton.style.color = "#f59e0b";
-
-        if (response && !response.success) {
-          console.error("Failed to open AI service:", response.error);
-        }
-      }
-    );
+    chrome.runtime.sendMessage({
+      type: "OPEN_AI_SERVICE",
+      aiService: settings.aiService,
+      content: completeText,
+    });
   };
 
   return summaryButton;
@@ -690,103 +527,37 @@ function createSummaryButton(chunkedTranscript: any[]): HTMLElement {
 function createVocabularyButton(chunkedTranscript: any[]): HTMLElement {
   const vocabularyButton = document.createElement("button");
   vocabularyButton.className = "transcript-vocabulary-button";
-  vocabularyButton.title = "Find difficult words and create vocabulary table";
+  vocabularyButton.title = "Vocabulary Table in AI";
 
-  const vocabularyIconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  vocabularyIconSvg.setAttribute("width", "20");
-  vocabularyIconSvg.setAttribute("height", "20");
-  vocabularyIconSvg.setAttribute("viewBox", "0 0 24 24");
-  vocabularyIconSvg.setAttribute("fill", "none");
-  vocabularyIconSvg.setAttribute("stroke", "currentColor");
-  vocabularyIconSvg.setAttribute("stroke-width", "2");
-  vocabularyIconSvg.setAttribute("stroke-linecap", "round");
-  vocabularyIconSvg.setAttribute("stroke-linejoin", "round");
-  vocabularyIconSvg.innerHTML = `
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-    <line x1="10" y1="8" x2="16" y2="8"></line>
-    <line x1="10" y1="12" x2="16" y2="12"></line>
-    <line x1="10" y1="16" x2="14" y2="16"></line>
-  `;
-  vocabularyButton.appendChild(vocabularyIconSvg);
+  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  icon.setAttribute("width", "20"); icon.setAttribute("height", "20");
+  icon.setAttribute("viewBox", "0 0 24 24"); icon.setAttribute("fill", "none");
+  icon.setAttribute("stroke", "currentColor"); icon.setAttribute("stroke-width", "2");
+  icon.innerHTML = `<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path><line x1="10" y1="8" x2="16" y2="8"></line><line x1="10" y1="12" x2="16" y2="12"></line><line x1="10" y1="16" x2="14" y2="16"></line>`;
+  vocabularyButton.appendChild(icon);
 
   vocabularyButton.style.cssText = `
-    background: transparent;
-    color: #ec4899;
-    padding: 0.5rem;
-    border-radius: 6px;
-    font-size: 20px;
-    font-weight: 600;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: none;
-    cursor: pointer;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
+    background: transparent; color: #ec4899; padding: 0.5rem; border-radius: 6px;
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; transition: all 0.3s ease;
   `;
-
-  vocabularyButton.onmouseover = () => {
-    vocabularyButton.style.background = "rgba(236, 72, 153, 0.1)";
-    vocabularyButton.style.color = "#db2777";
-    vocabularyButton.style.transform = "scale(1.1)";
-  };
-  vocabularyButton.onmouseout = () => {
-    vocabularyButton.style.background = "transparent";
-    vocabularyButton.style.color = "#ec4899";
-    vocabularyButton.style.transform = "scale(1)";
-  };
 
   vocabularyButton.onclick = (e) => {
     e.stopPropagation();
-
-    // Get video title
+    const settings = getSettings();
     const videoTitle = getVideoTitle();
-
-    // Get video URL
-    const videoUrl = window.location.href.split('&')[0];
-
-    // Build transcript text
+    const videoUrl = window.location.href.split("&")[0];
     const transcriptText = chunkedTranscript
-      .map((chunk) => {
-        const chunkTimestamp = formatTimestamp(chunk.start);
-        const chunkText = chunk.lines.map((line: any) => line.text).join(" ");
-        return `[${chunkTimestamp}] ${chunkText}`;
-      })
+      .map((chunk) => `[${formatTimestamp(chunk.start)}] ${chunk.lines.map((l: any) => l.text).join(" ")}`)
       .join("\n\n");
 
-    // Format with vocabulary prompt from settings
-    const prompt = settings.aiPrompts.vocabulary;
-    const completeText = `${prompt}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
+    const completeText = `${settings.aiPrompts.vocabulary}\n\n${videoTitle}\n${videoUrl}\n\nTranscript:\n${transcriptText}`;
 
-    // Show loading state
-    vocabularyButton.style.color = "#db2777";
-    const svg = vocabularyButton.querySelector("svg");
-    if (svg) {
-      svg.style.opacity = "0.5";
-    }
-
-    // Send message to background script with AI service selection
-    chrome.runtime.sendMessage(
-      {
-        type: "OPEN_AI_SERVICE",
-        aiService: settings.aiService,
-        content: completeText,
-      },
-      (response) => {
-        // Reset button state
-        if (svg) {
-          svg.style.opacity = "1";
-        }
-        vocabularyButton.style.color = "#ec4899";
-
-        if (response && !response.success) {
-          console.error("Failed to open AI service:", response.error);
-        }
-      }
-    );
+    chrome.runtime.sendMessage({
+      type: "OPEN_AI_SERVICE",
+      aiService: settings.aiService,
+      content: completeText,
+    });
   };
 
   return vocabularyButton;
@@ -802,7 +573,10 @@ function setupHeaderToggle(header: HTMLElement, content: HTMLElement): void {
   };
 }
 
-function renderTranscriptChunks(chunkedTranscript: any[], content: HTMLElement): void {
+function renderTranscriptChunks(
+  chunkedTranscript: any[],
+  content: HTMLElement,
+): void {
   chunkedTranscript.forEach((chunk) => {
     const chunkHeader = createChunkHeader(chunk);
     content.appendChild(chunkHeader);
@@ -816,139 +590,46 @@ function createChunkHeader(chunk: any): HTMLElement {
   const chunkHeader = document.createElement("div");
   chunkHeader.className = "transcript-chunk-header";
   chunkHeader.style.cssText = `
-    color: #2563eb;
-    font-weight: 700;
-    cursor: pointer;
-    font-size: 14px;
-    line-height: 1.4em;
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-    margin-bottom: 0.125rem;
-    margin-top: 0.125rem;
-    padding: 0.25rem 0.75rem;
-    border-radius: 6px;
-    border-left: 3px solid #2563eb;
-    display: inline-block;
-    transition: all 0.2s ease;
+    color: #2563eb; font-weight: 700; cursor: pointer; font-size: 14px;
+    font-family: monospace; margin-bottom: 0.125rem; margin-top: 0.125rem;
+    padding: 0.25rem 0.75rem; border-radius: 6px; border-left: 3px solid #2563eb;
+    display: inline-block; transition: all 0.2s ease;
   `;
-
-  chunkHeader.onmouseover = function () {
-    (this as HTMLElement).style.transform = "translateX(4px)";
-  };
-  chunkHeader.onmouseout = function () {
-    (this as HTMLElement).style.transform = "translateX(0)";
-  };
-
   chunkHeader.textContent = formatTimestamp(chunk.start);
   chunkHeader.onclick = () => {
     const video = document.querySelector("video");
-    if (video) {
-      video.currentTime = chunk.start;
-    }
+    if (video) video.currentTime = chunk.start;
   };
-
   return chunkHeader;
 }
 
 function createChunkParagraph(chunk: any): HTMLElement {
   const paragraphEl = document.createElement("div");
   paragraphEl.className = "transcript-chunk-paragraph";
-
   const isCurrentlyDarkMode = isDarkMode();
   const textColor = isCurrentlyDarkMode ? "#e5e7eb" : "#1f2937";
 
   paragraphEl.style.cssText = `
-    margin-bottom: 0.1rem;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    line-height: 1.8em;
-    font-size: 15px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    color: ${textColor};
-    text-align: justify;
-    transition: all 0.3s ease;
+    margin-bottom: 0.1rem; padding: 0.75rem 1rem; border-radius: 0.5rem;
+    line-height: 1.8em; font-size: 15px; color: ${textColor}; text-align: justify;
   `;
 
-  // Create spans for each line in the chunk
   chunk.lines.forEach((lineData: any, index: number) => {
     const span = document.createElement("span");
     span.className = "transcript-segment";
     span.dataset.start = lineData.start.toString();
     span.dataset.duration = lineData.duration.toString();
     span.textContent = lineData.text;
-    span.style.cssText = `
-      color: ${textColor};
-      transition: all 0.2s ease;
-      cursor: pointer;
-    `;
-
+    span.style.cssText = `color: ${textColor}; transition: all 0.2s ease; cursor: pointer;`;
     span.onclick = () => {
       const video = document.querySelector("video");
-      if (video) {
-        video.currentTime = lineData.start;
-      }
+      if (video) video.currentTime = lineData.start;
     };
-
     paragraphEl.appendChild(span);
-
-    // Add space between segments (but not after the last one)
-    if (index < chunk.lines.length - 1) {
-      paragraphEl.appendChild(document.createTextNode(" "));
-    }
+    if (index < chunk.lines.length - 1) paragraphEl.appendChild(document.createTextNode(" "));
   });
 
   return paragraphEl;
-}
-
-function createTranscriptLine(lineData: any): HTMLElement {
-  const lineEl = document.createElement("div");
-  lineEl.className = "transcript-line";
-  lineEl.dataset.start = lineData.start.toString();
-  lineEl.dataset.duration = lineData.duration.toString();
-  lineEl.style.cssText = `
-    margin-bottom: 1rem;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    transition: all 0.3s ease;
-    line-height: 1.6em;
-  `;
-
-  lineEl.onmouseover = function () {
-    const isDarkMode =
-      document.documentElement.classList.contains("dark") ||
-      document.querySelector("html")?.getAttribute("dark") !== null ||
-      document.body.style.backgroundColor === "rgb(19, 19, 19)" ||
-      document.body.style.backgroundColor === "#131313";
-
-    if (!lineEl.classList.contains("active")) {
-      lineEl.style.backgroundColor = isDarkMode
-        ? "rgba(55, 65, 81, 0.5)"
-        : "rgba(243, 244, 246, 0.8)";
-    }
-  };
-  lineEl.onmouseout = function () {
-    if (!lineEl.classList.contains("active")) {
-      lineEl.style.backgroundColor = "transparent";
-    }
-  };
-
-  const textEl = document.createElement("span");
-  textEl.className = "transcript-text";
-  textEl.textContent = lineData.text;
-  textEl.style.cssText = `
-    color: #1f2937;
-    font-size: 15px;
-    line-height: 1.6;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    transition: color 0.3s ease;
-    cursor: pointer;
-    letter-spacing: 0.01em;
-    user-select: text;
-    display: block;
-    word-wrap: break-word;
-  `;
-
-  lineEl.appendChild(textEl);
-  return lineEl;
 }
 
 function isDarkMode(): boolean {
@@ -957,7 +638,6 @@ function isDarkMode(): boolean {
   if (document.documentElement.classList.contains("dark")) return true;
   const bodyBg = document.body.style.backgroundColor;
   if (bodyBg === "rgb(19, 19, 19)" || bodyBg === "#131313") return true;
-  if (html?.hasAttribute("light")) return false;
   return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
 }
 
@@ -965,137 +645,69 @@ function applyDarkModeStyles(
   isDark: boolean,
   container: HTMLElement,
   header: HTMLElement,
-  content: HTMLElement
+  content: HTMLElement,
 ): void {
-  const isFullHeight = settings.removeWatchPageSuggestions;
-  const maxHeight = isFullHeight ? "calc(100vh - 180px)" : "24rem";
+  const settings = getSettings();
+  const maxHeight = settings.removeWatchPageSuggestions ? "calc(100vh - 180px)" : "24rem";
 
   if (isDark) {
-    container.style.cssText = `
-      background: rgba(0, 0, 0, 0.95);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(60, 60, 60, 0.6);
-      border-radius: 12px;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 4px 12px -4px rgba(0, 0, 0, 0.3);
-      overflow: hidden;
-    `;
-    header.style.cssText = `
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.5rem 1rem;
-      border-bottom: 1px solid rgba(60, 60, 60, 0.6);
-      cursor: pointer;
-      background: rgba(30, 30, 30, 0.8);
-      gap: 0.5rem;
-    `;
-    const title = header.querySelector(".transcript-title") as HTMLElement;
-    if (title) {
-      title.style.color = "#e5e7eb";
-    }
-    content.style.maxHeight = maxHeight;
+    container.style.background = "rgba(0, 0, 0, 0.95)";
+    container.style.border = "1px solid rgba(60, 60, 60, 0.6)";
+    header.style.background = "rgba(30, 30, 30, 0.8)";
+    header.style.borderBottom = "1px solid rgba(60, 60, 60, 0.6)";
+    (header.querySelector(".transcript-title") as HTMLElement).style.color = "#e5e7eb";
   } else {
-    container.style.cssText = `
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(229, 231, 235, 0.8);
-      border-radius: 12px;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 12px -4px rgba(0, 0, 0, 0.08);
-      overflow: hidden;
-    `;
-    header.style.cssText = `
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.5rem 1rem;
-      border-bottom: 1px solid rgba(229, 231, 235, 0.6);
-      cursor: pointer;
-      background: rgba(249, 250, 251, 0.8);
-      gap: 0.5rem;
-    `;
-    const title = header.querySelector(".transcript-title") as HTMLElement;
-    if (title) {
-      title.style.color = "#1f2937";
-    }
-    content.style.maxHeight = maxHeight;
+    container.style.background = "rgba(255, 255, 255, 0.95)";
+    container.style.border = "1px solid rgba(229, 231, 235, 0.8)";
+    header.style.background = "rgba(249, 250, 251, 0.8)";
+    header.style.borderBottom = "1px solid rgba(229, 231, 235, 0.6)";
+    (header.querySelector(".transcript-title") as HTMLElement).style.color = "#1f2937";
   }
+  content.style.maxHeight = maxHeight;
 }
 
-function setupDarkModeObserver(
-  container: HTMLElement,
-  header: HTMLElement,
-  content: HTMLElement
-): void {
+function setupDarkModeObserver(container: HTMLElement, header: HTMLElement, content: HTMLElement): void {
   const observer = new MutationObserver(() => {
-    const currentDarkMode = isDarkMode();
-    applyDarkModeStyles(currentDarkMode, container, header, content);
-
-    // Update paragraph and segment colors
-    const textColor = currentDarkMode ? "#e5e7eb" : "#1f2937";
-    const paragraphs = content.querySelectorAll(".transcript-chunk-paragraph");
-    paragraphs.forEach((p) => {
-      const paragraphEl = p as HTMLElement;
-      paragraphEl.style.color = textColor;
-    });
-
-    const segments = content.querySelectorAll(".transcript-segment");
-    segments.forEach((s) => {
-      const segmentEl = s as HTMLElement;
-      if (!segmentEl.classList.contains("active")) {
-        segmentEl.style.color = textColor;
-      }
+    const isDark = isDarkMode();
+    applyDarkModeStyles(isDark, container, header, content);
+    const textColor = isDark ? "#e5e7eb" : "#1f2937";
+    content.querySelectorAll(".transcript-chunk-paragraph, .transcript-segment:not(.active)").forEach((el) => {
+      (el as HTMLElement).style.color = textColor;
     });
   });
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["class"],
-  });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
   observer.observe(document.body, { attributes: true });
-  
-  // Also observe for style changes on body
-  const bodyObserver = new MutationObserver(() => {
-    const currentDarkMode = isDarkMode();
-    applyDarkModeStyles(currentDarkMode, container, header, content);
-  });
-  bodyObserver.observe(document.body, {
-    attributes: true,
-    attributeFilter: ["style"]
-  });
-
-  if (window.matchMedia) {
-    const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => {
-      const currentDarkMode = isDarkMode();
-      applyDarkModeStyles(currentDarkMode, container, header, content);
-      const textColor = currentDarkMode ? "#e5e7eb" : "#1f2937";
-      content.querySelectorAll(".transcript-chunk-paragraph").forEach((p) => {
-        (p as HTMLElement).style.color = textColor;
-      });
-      content.querySelectorAll(".transcript-segment").forEach((s) => {
-        const el = s as HTMLElement;
-        if (!el.classList.contains("active")) el.style.color = textColor;
-      });
-    };
-    if (mql.addEventListener) mql.addEventListener("change", onChange);
-    else if (mql.addListener) mql.addListener(onChange);
-  }
 }
 
-function setupVideoTimeTracking(content: HTMLElement): void {
-  let isUserScrolling = false;
-  let scrollTimeout: number;
+function setupVideoTimeTracking(
+  content: HTMLElement,
+  transcriptScrollState: {
+    isUserScrolling: boolean;
+    ignoreProgrammaticScroll: boolean;
+  },
+  syncButton: HTMLElement,
+): void {
+  const markUserScroll = () => {
+    if (transcriptScrollState.isUserScrolling) return; // Already true
+    
+    transcriptScrollState.isUserScrolling = true;
+    
+    // VISUAL FEEDBACK: Highlight the sync button so user knows how to resume
+    syncButton.style.color = "#f59e0b"; // Orange/Amber
+    syncButton.style.background = "rgba(245, 158, 11, 0.1)";
+    syncButton.title = "Auto-scroll PAUSED. Click to resume.";
+    console.log("Productive YouTube: Auto-scroll paused due to manual interaction.");
+  };
 
+  content.addEventListener("wheel", markUserScroll, { passive: true });
+  content.addEventListener("touchstart", markUserScroll, { passive: true });
+  content.addEventListener("mousedown", markUserScroll, { passive: true });
+  
   content.addEventListener("scroll", () => {
-    isUserScrolling = true;
-    clearTimeout(scrollTimeout);
-    scrollTimeout = window.setTimeout(() => {
-      isUserScrolling = false;
-    }, 3000);
-  });
+    if (!transcriptScrollState.ignoreProgrammaticScroll) {
+      markUserScroll();
+    }
+  }, { passive: true });
 
   const video = document.querySelector("video");
   if (video) {
@@ -1115,40 +727,33 @@ function setupVideoTimeTracking(content: HTMLElement): void {
         if (currentTime >= start && currentTime < end) {
           segmentEl.classList.add("active");
           activeSegment = segmentEl;
-
-          // Highlight the active segment
-          segmentEl.style.cssText = `
-            background-color: ${
-              isCurrentlyDarkMode
-                ? "rgba(59, 130, 246, 0.4)"
-                : "rgba(59, 130, 246, 0.25)"
-            };
-            color: ${isCurrentlyDarkMode ? "#93c5fd" : "#1e40af"};
-            font-weight: 600;
-            padding: 0.125rem 0.25rem;
-            border-radius: 0.25rem;
-            transition: all 0.2s ease;
-            cursor: pointer;
-          `;
+          segmentEl.style.backgroundColor = isCurrentlyDarkMode ? "rgba(59, 130, 246, 0.4)" : "rgba(59, 130, 246, 0.25)";
+          segmentEl.style.color = isCurrentlyDarkMode ? "#93c5fd" : "#1e40af";
+          segmentEl.style.fontWeight = "600";
+          segmentEl.style.padding = "0.125rem 0.25rem";
+          segmentEl.style.borderRadius = "0.25rem";
         } else {
           segmentEl.classList.remove("active");
-          const inactiveTextColor = isCurrentlyDarkMode ? "#e5e7eb" : "#1f2937";
-          segmentEl.style.cssText = `
-            color: ${inactiveTextColor};
-            transition: all 0.2s ease;
-            cursor: pointer;
-          `;
+          segmentEl.style.backgroundColor = "transparent";
+          segmentEl.style.color = isCurrentlyDarkMode ? "#e5e7eb" : "#1f2937";
+          segmentEl.style.fontWeight = "normal";
+          segmentEl.style.padding = "0";
         }
       });
 
-      // Auto-scroll to active segment
-      if (activeSegment && !isUserScrolling) {
+      // ONLY SCROLL IF USER HASN'T MANUALLY SCROLLED
+      if (activeSegment && !transcriptScrollState.isUserScrolling) {
         const segmentTop = activeSegment.getBoundingClientRect().top;
         const contentTop = content.getBoundingClientRect().top;
         const relativeTop = segmentTop - contentTop + content.scrollTop;
         const containerHeight = content.clientHeight;
         const scrollPosition = relativeTop - containerHeight / 2;
+
+        transcriptScrollState.ignoreProgrammaticScroll = true;
         content.scrollTo({ top: scrollPosition, behavior: "smooth" });
+        window.requestAnimationFrame(() => {
+          transcriptScrollState.ignoreProgrammaticScroll = false;
+        });
       }
     });
   }

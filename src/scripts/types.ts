@@ -25,6 +25,7 @@ export interface Settings {
   removeWatchPageSuggestions: boolean;
   showTranscript: boolean;
   enableIntentWall: boolean;
+  removeComments: boolean;
 
   // AI Settings
   aiService: AIService;

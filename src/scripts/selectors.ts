@@ -58,3 +58,19 @@ export const VIDEO_END_SUGGESTIONS_SELECTORS: string[] = [
   ".ytp-scroll-min",
   ".ytp-scroll-max",
 ];
+
+// Comments section
+export const COMMENT_SELECTORS: string[] = [
+  "ytd-comments",
+  "#comments",
+  "ytd-comments-renderer",
+  "ytd-comment-thread-renderer",
+  "ytd-comments-header-renderer",
+  "#comments ytd-comments-renderer",
+  "#comments ytd-comment-thread-renderer",
+  "#comments ytd-comments-header-renderer",
+  "ytd-item-section-renderer:has(#comments)",
+  "#sections.ytd-comments",
+  "#comments #sections",
+  "#comments #contents",
+];

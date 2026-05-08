@@ -5,13 +5,28 @@ import { initializeSettings, getSettings } from "./settings";
 
 // Import removers
 import { removeShorts, throttledRemoveShorts } from "./removers/shorts";
-import { removeHomepageVideos, throttledRemoveHomepageVideos } from "./removers/homepage";
-import { removeVideoSuggestions, throttledRemoveVideoSuggestions } from "./removers/suggestions";
-import { removeShortsButton, throttledRemoveShortsButton } from "./removers/shortsButton";
+import {
+  removeHomepageVideos,
+  throttledRemoveHomepageVideos,
+} from "./removers/homepage";
+import {
+  removeVideoSuggestions,
+  throttledRemoveVideoSuggestions,
+} from "./removers/suggestions";
+import {
+  removeShortsButton,
+  throttledRemoveShortsButton,
+} from "./removers/shortsButton";
 import { showIntentWall, removeIntentWall } from "./removers/intentWall";
+import { removeComments, throttledRemoveComments } from "./removers/comments";
 
 // Import transcript functionality
-import { showVideoTranscript, cleanupTranscript, isWatchPage, isHomePage } from "./transcript";
+import {
+  showVideoTranscript,
+  cleanupTranscript,
+  isWatchPage,
+  isHomePage,
+} from "./transcript";
 
 // Track last video ID to detect video changes during SPA navigation
 let lastVideoId: string | null = null;
@@ -23,14 +38,14 @@ function initializeFullExtension(): void {
     () => {
       // Apply CSS overrides based on initial settings
       updateCSSOverrides();
-      
+
       // Apply all removals based on settings
       applyAllRemovals();
 
       // Create observer for dynamic content
       const observer = new MutationObserver((mutations) => {
         let shouldCheck = false;
-        
+
         for (const mutation of mutations) {
           if (mutation.addedNodes.length > 0) {
             for (const node of mutation.addedNodes) {
@@ -38,13 +53,15 @@ function initializeFullExtension(): void {
                 const el = node as HTMLElement;
                 // Ignore small noise like progress bars, timestamps, or player controls
                 // which change thousands of times per session
-                if (el.classList.contains('ytp-progress-bar') || 
-                    el.classList.contains('ytp-time-display') ||
-                    el.tagName === 'SPAN' || 
-                    el.tagName === 'PATH') {
+                if (
+                  el.classList.contains("ytp-progress-bar") ||
+                  el.classList.contains("ytp-time-display") ||
+                  el.tagName === "SPAN" ||
+                  el.tagName === "PATH"
+                ) {
                   continue;
                 }
-                
+
                 shouldCheck = true;
                 break;
               }
@@ -60,20 +77,22 @@ function initializeFullExtension(): void {
 
       // Optimization: Watch the main app container instead of the whole body
       // This ignores many background scripts and technical tags
-      const targetNode = document.querySelector('ytd-app') || document.body;
-      
+      const targetNode = document.querySelector("ytd-app") || document.body;
+
       observer.observe(targetNode, {
         childList: true,
         subtree: true,
       });
-      
-      console.log(`Productive YouTube: Observer started on <${targetNode.tagName.toLowerCase()}>`);
+
+      console.log(
+        `Productive YouTube: Observer started on <${targetNode.tagName.toLowerCase()}>`,
+      );
     },
     () => {
       // If settings changed, update CSS overrides and apply removals
       updateCSSOverrides();
       applyAllRemovals();
-    }
+    },
   );
 }
 
@@ -85,17 +104,21 @@ function updateCSSOverrides(): void {
   const html = document.documentElement;
 
   // If a setting is FALSE, we add a class to SHOW that element (override the blocker.css)
-  if (!settings.removeShorts) html.classList.add('show-shorts');
-  else html.classList.remove('show-shorts');
+  if (!settings.removeShorts) html.classList.add("show-shorts");
+  else html.classList.remove("show-shorts");
 
-  if (!settings.removeShortsButton) html.classList.add('show-shorts-button');
-  else html.classList.remove('show-shorts-button');
+  if (!settings.removeShortsButton) html.classList.add("show-shorts-button");
+  else html.classList.remove("show-shorts-button");
 
-  if (!settings.removeHomepageVideos) html.classList.add('show-homepage');
-  else html.classList.remove('show-homepage');
+  if (!settings.removeHomepageVideos) html.classList.add("show-homepage");
+  else html.classList.remove("show-homepage");
 
-  if (!settings.removeWatchPageSuggestions) html.classList.add('show-suggestions');
-  else html.classList.remove('show-suggestions');
+  if (!settings.removeWatchPageSuggestions)
+    html.classList.add("show-suggestions");
+  else html.classList.remove("show-suggestions");
+
+  if (!settings.removeComments) html.classList.add("show-comments");
+  else html.classList.remove("show-comments");
 }
 
 // Apply all removal functions based on current page
@@ -104,6 +127,7 @@ function applyAllRemovals(): void {
   removeShorts();
   removeShortsButton();
   showIntentWall();
+  removeComments();
 
   // Page-specific removals
   if (isWatchPage()) {
@@ -130,6 +154,7 @@ function applyAllRemovals(): void {
 function applyAllRemovalsThrottled(): void {
   throttledRemoveShorts();
   throttledRemoveShortsButton();
+  throttledRemoveComments();
   showIntentWall();
 
   if (isWatchPage()) {
@@ -170,7 +195,6 @@ function handleYouTubeNavigation(): void {
   }
 }
 
-
 // Initialize when DOM is ready
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initializeFullExtension);
@@ -188,6 +212,7 @@ document.addEventListener("yt-navigate-finish", () => {
     // Also apply other removals
     removeShorts();
     removeShortsButton();
+    removeComments();
     if (isHomePage()) {
       removeHomepageVideos();
     }
@@ -200,6 +225,7 @@ window.addEventListener("popstate", () => {
     handleYouTubeNavigation();
     removeShorts();
     removeShortsButton();
+    removeComments();
     if (isHomePage()) {
       removeHomepageVideos();
     }

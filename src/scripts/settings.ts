@@ -9,6 +9,7 @@ const defaultSettings: Settings = {
   removeWatchPageSuggestions: true,
   showTranscript: false,
   enableIntentWall: true,
+  removeComments: true,
 
   // AI Settings
   aiService: 'chatgpt',

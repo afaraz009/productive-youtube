@@ -5,6 +5,7 @@ let intentVerified = false;
 
 /**
  * Creates and manages the Intent Wall overlay
+ * Now simplified to prompt use of the native YouTube search bar
  */
 export function showIntentWall(): void {
   const settings = getSettings();
@@ -32,50 +33,40 @@ export function showIntentWall(): void {
 
   wall.innerHTML = `
     <div class="intent-content">
+      <div class="intent-icon">🎯</div>
       <div class="intent-header">What is your goal today?</div>
-      <div class="intent-subheader">State your intent to stay focused and avoid distractions.</div>
-      <div class="intent-input-container">
-        <input type="text" class="intent-input" placeholder="e.g. Learn React Hooks, Master CSS Grid..." autofocus>
-      </div>
-      <div class="intent-hint">Press Enter to start your productive session</div>
+      <div class="intent-subheader">Use the search bar at the top to start your focused session.</div>
+      <div class="intent-arrow">↑</div>
     </div>
   `;
 
   document.body.appendChild(wall);
-
-  const input = wall.querySelector('.intent-input') as HTMLInputElement;
-  input?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && input.value.trim().length > 0) {
-      handleIntentSubmit(input.value.trim());
-    }
-  });
-
-  // Auto-focus input
-  setTimeout(() => input?.focus(), 100);
+  
+  // Add a listener to the native YouTube search form to hide the wall when user searches
+  setupNativeSearchListener();
 }
 
-function handleIntentSubmit(intent: string): void {
-  intentVerified = true;
-  
-  // Hide the wall
+/**
+ * Detects when a user submits a search in the native YouTube search bar
+ */
+function setupNativeSearchListener(): void {
+  const searchForm = document.querySelector('form#search-form');
+  if (searchForm) {
+    searchForm.addEventListener('submit', () => {
+      intentVerified = true;
+      removeIntentWall();
+    }, { once: true });
+  }
+}
+
+export function removeIntentWall(): void {
   const wall = document.getElementById('productive-intent-wall');
   if (wall) {
     wall.style.opacity = '0';
     setTimeout(() => wall.remove(), 300);
   }
-
-  // Redirect to search results for that intent
-  window.location.href = `https://www.youtube.com/results?search_query=${encodeURIComponent(intent)}`;
 }
 
-export function removeIntentWall(): void {
-  const wall = document.getElementById('productive-intent-wall');
-  if (wall) wall.remove();
-}
-
-/**
- * Resets the intent verification (e.g. when navigating back to homepage after a while)
- */
 export function resetIntent(): void {
   intentVerified = false;
 }
