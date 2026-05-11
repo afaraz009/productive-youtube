@@ -8,9 +8,9 @@ export default defineConfig({
     outDir: "dist",
     rollupOptions: {
       input: {
-        popup: "src/popup.html",
-        content: "src/content.ts",
-        background: "src/background.ts",
+        popup: "src/popup/index.html",
+        content: "src/content/index.ts",
+        background: "src/background/index.ts",
         chatgpt_automation: "src/features/automation/chatgpt-automation.ts",
         gemini_automation: "src/features/automation/gemini-automation.ts",
         claude_automation: "src/features/automation/claude-automation.ts",

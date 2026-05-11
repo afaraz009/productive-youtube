@@ -45,15 +45,23 @@ async function runPostBuild() {
       copyFile(path.join(PUBLIC_DIR, 'icons', icon), path.join(iconDest, icon));
     });
 
-    // 3. Handle popup.html move (Vite puts it in dist/src/ if not configured carefully)
-    const srcPopup = path.join(DIST_DIR, 'src', 'popup.html');
+    // 3. Handle popup.html move (Vite might name it index.html in a subfolder)
+    let srcPopup = path.join(DIST_DIR, 'src', 'popup', 'index.html');
     const destPopup = path.join(DIST_DIR, 'popup.html');
+
+    if (!fs.existsSync(srcPopup)) {
+      // Fallback if structure is different
+      srcPopup = path.join(DIST_DIR, 'src', 'popup.html');
+    }
 
     if (fs.existsSync(srcPopup)) {
       let html = fs.readFileSync(srcPopup, 'utf8');
       
       // Update script and link paths for the root location
-      html = html.replace(/\.\.\/popup\.js/g, './popup.js')
+      // They might be ../../popup.js or ../popup.js
+      html = html.replace(/\.\.\/\.\.\/popup\.js/g, './popup.js')
+                 .replace(/\.\.\/\.\.\/popup\.css/g, './popup.css')
+                 .replace(/\.\.\/popup\.js/g, './popup.js')
                  .replace(/\.\.\/popup\.css/g, './popup.css');
       
       fs.writeFileSync(destPopup, html);
