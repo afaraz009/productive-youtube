@@ -9,12 +9,12 @@ export default defineConfig({
     rollupOptions: {
       input: {
         popup: "src/popup.html",
-        content: "src/scripts/content.ts",
+        content: "src/content.ts",
         background: "src/background.ts",
-        chatgpt_automation: "src/scripts/chatgpt-automation.ts",
-        gemini_automation: "src/scripts/gemini-automation.ts",
-        claude_automation: "src/scripts/claude-automation.ts",
-        grok_automation: "src/scripts/grok-automation.ts",
+        chatgpt_automation: "src/features/automation/chatgpt-automation.ts",
+        gemini_automation: "src/features/automation/gemini-automation.ts",
+        claude_automation: "src/features/automation/claude-automation.ts",
+        grok_automation: "src/features/automation/grok-automation.ts",
         blocker: "src/styles/blocker.css",
       },
       output: {

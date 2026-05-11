@@ -1,5 +1,5 @@
 // Background service worker for handling API calls (bypasses CORS)
-import { MessageType, MessagePayload } from "./scripts/messaging";
+import { MessageType, MessagePayload } from "./types/messaging";
 
 chrome.runtime.onMessage.addListener((request: MessagePayload, _sender, sendResponse) => {
   if (request.type === MessageType.FETCH_TRANSCRIPT) {

@@ -4,7 +4,7 @@ import {
   AIService,
   AIPrompts,
   ExtensionMode,
-} from "../scripts/types";
+} from "../types/types";
 
 const ToggleSwitch: React.FC<{
   id: string;

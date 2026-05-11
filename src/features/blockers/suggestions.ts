@@ -1,5 +1,5 @@
-import { getSettings } from "../settings";
-import { VIDEO_SUGGESTIONS_SELECTORS } from "../selectors";
+import { getSettings } from "../../core/settings";
+import { VIDEO_SUGGESTIONS_SELECTORS } from "../../core/selectors";
 
 // Generic restore function
 function restoreElements(

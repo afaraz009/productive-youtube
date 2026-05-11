@@ -1,4 +1,4 @@
-import { getSettings } from "../settings";
+import { getSettings } from "../../core/settings";
 
 // Function to remove Shorts button from sidebar
 export function removeShortsButton(): void {

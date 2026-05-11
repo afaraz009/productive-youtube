@@ -1,5 +1,5 @@
-import { getSettings } from "../settings";
-import { HOMEPAGE_VIDEO_SELECTORS } from "../selectors";
+import { getSettings } from "../../core/settings";
+import { HOMEPAGE_VIDEO_SELECTORS } from "../../core/selectors";
 
 // Generic restore function
 function restoreElements(

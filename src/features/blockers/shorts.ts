@@ -1,5 +1,5 @@
-import { getSettings } from "../settings";
-import { SHORTS_SELECTORS } from "../selectors";
+import { getSettings } from "../../core/settings";
+import { SHORTS_SELECTORS } from "../../core/selectors";
 
 // Function to find and remove the Shorts section
 export function removeShorts(): void {

@@ -1,24 +1,24 @@
 // Main content script - orchestrates all features
 
 // Import settings management
-import { initializeSettings, getSettings } from "./settings";
+import { initializeSettings, getSettings } from "./core/settings";
 
 // Import removers
-import { removeShorts, throttledRemoveShorts } from "./removers/shorts";
+import { removeShorts, throttledRemoveShorts } from "./features/blockers/shorts";
 import {
   removeHomepageVideos,
   throttledRemoveHomepageVideos,
-} from "./removers/homepage";
+} from "./features/blockers/homepage";
 import {
   removeVideoSuggestions,
   throttledRemoveVideoSuggestions,
-} from "./removers/suggestions";
+} from "./features/blockers/suggestions";
 import {
   removeShortsButton,
   throttledRemoveShortsButton,
-} from "./removers/shortsButton";
-import { showIntentWall, removeIntentWall } from "./removers/intentWall";
-import { removeComments, throttledRemoveComments } from "./removers/comments";
+} from "./features/blockers/shortsButton";
+import { showIntentWall, removeIntentWall } from "./features/blockers/intentWall";
+import { removeComments, throttledRemoveComments } from "./features/blockers/comments";
 
 // Import transcript functionality
 import {
@@ -26,7 +26,7 @@ import {
   cleanupTranscript,
   isWatchPage,
   isHomePage,
-} from "./transcript";
+} from "./features/transcript";
 
 // Track last video ID to detect video changes during SPA navigation
 let lastVideoId: string | null = null;

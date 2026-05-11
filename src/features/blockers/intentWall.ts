@@ -1,4 +1,4 @@
-import { getSettings } from "../settings";
+import { getSettings } from "../../core/settings";
 import { isHomePage } from "../transcript/utils";
 
 let intentVerified = false;

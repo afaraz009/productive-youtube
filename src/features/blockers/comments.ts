@@ -1,5 +1,5 @@
-import { getSettings } from "../settings";
-import { COMMENT_SELECTORS } from "../selectors";
+import { getSettings } from "../../core/settings";
+import { COMMENT_SELECTORS } from "../../core/selectors";
 
 // Function to find and remove the Comments section
 export function removeComments(): void {
