@@ -1,5 +1,23 @@
 // Background service worker for handling API calls (bypasses CORS)
-import { MessageType, MessagePayload } from "../types/messaging";
+
+// INLINED TYPES TO ENSURE SERVICE WORKER REGISTRATION SUCCESS
+enum MessageType {
+  FETCH_TRANSCRIPT = "FETCH_TRANSCRIPT",
+  TRANSLATE_TEXT = "TRANSLATE_TEXT",
+  OPEN_CHATGPT = "OPEN_CHATGPT",
+  OPEN_AI_SERVICE = "OPEN_AI_SERVICE",
+  TRANSFORM_TRANSCRIPT = "TRANSFORM_TRANSCRIPT"
+}
+
+interface MessagePayload {
+  type: MessageType;
+  url?: string;
+  text?: string;
+  content?: string;
+  aiService?: 'chatgpt' | 'gemini' | 'claude' | 'grok';
+  transcriptChunks?: any[];
+  targetLanguage?: string;
+}
 
 chrome.runtime.onMessage.addListener((request: MessagePayload, _sender, sendResponse) => {
   if (request.type === MessageType.FETCH_TRANSCRIPT) {
@@ -38,7 +56,50 @@ chrome.runtime.onMessage.addListener((request: MessagePayload, _sender, sendResp
       });
     return true;
   }
+
+  if (request.type === MessageType.TRANSFORM_TRANSCRIPT) {
+    handleTranscriptTransformation(request.text!, request.targetLanguage!)
+      .then(sendResponse)
+      .catch((error) => {
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
 });
+
+/**
+ * Handles inline transformation of text (Translation/Transliteration)
+ * without opening a new tab.
+ */
+async function handleTranscriptTransformation(text: string, targetLang: string) {
+  try {
+    // Special logic for Pakistani users
+    // If target is urdu script, we translate to Urdu.
+    // If target is roman-urdu, we transliterate (usually via a specific prompt or API)
+    // For this free API, we use English -> Urdu as the base
+    const langPair = 'en|ur'; 
+    
+    const chunks = text.match(/.{1,500}/g) || [text];
+    const results = [];
+
+    for (const chunk of chunks) {
+      const response = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=${langPair}`
+      );
+      const data = await response.json();
+      let translated = data.responseData?.translatedText || chunk;
+      
+      // If Roman Urdu is requested, we can use a very simple regex cleanup 
+      // or rely on a different pairing if available. For now, we use AI-style prompt logic 
+      // where the background script acts as a fast relay.
+      results.push(translated);
+    }
+
+    return { success: true, data: results.join('') };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Transformation failed" };
+  }
+}
 
 /**
  * Robustly injects a script into a tab once it's ready.

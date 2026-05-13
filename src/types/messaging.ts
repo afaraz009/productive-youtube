@@ -5,7 +5,8 @@ export enum MessageType {
   FETCH_TRANSCRIPT = "FETCH_TRANSCRIPT",
   TRANSLATE_TEXT = "TRANSLATE_TEXT",
   OPEN_CHATGPT = "OPEN_CHATGPT", // Kept for backward compatibility
-  OPEN_AI_SERVICE = "OPEN_AI_SERVICE"
+  OPEN_AI_SERVICE = "OPEN_AI_SERVICE",
+  TRANSFORM_TRANSCRIPT = "TRANSFORM_TRANSCRIPT"
 }
 
 export interface MessagePayload {
@@ -14,6 +15,8 @@ export interface MessagePayload {
   text?: string;
   content?: string;
   aiService?: AIService;
+  transcriptChunks?: any[];
+  targetLanguage?: string;
 }
 
 export interface MessageResponse {

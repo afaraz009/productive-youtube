@@ -4,36 +4,54 @@
 
 /* Custom component styles */
 @layer components {
-  .toggle-switch {
-    @apply relative inline-block w-11 h-6;
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-xl;
   }
 
-  .toggle-switch input {
-    @apply opacity-0 w-0 h-0;
+  .glass-card-active {
+    @apply bg-blue-500/10 backdrop-blur-md border border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.15)];
   }
 
-  .toggle-slider {
-    @apply absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-gray-300 transition-all duration-300 rounded-full;
+  .toggle-row {
+    @apply flex items-center justify-between p-3 rounded-xl transition-all duration-200 hover:bg-white/5;
   }
 
-  .toggle-slider:before {
-    @apply absolute content-[''] h-4 w-4 left-1 bottom-1 bg-white transition-all duration-300 rounded-full shadow-md;
+  .toggle-pill {
+    @apply relative inline-flex items-center cursor-pointer flex-shrink-0 w-9 h-5 rounded-full transition-colors duration-200 ease-in-out;
   }
 
-  .toggle-switch input:checked + .toggle-slider {
-    @apply bg-gradient-to-r from-green-500 to-emerald-500;
-  }
-
-  .toggle-switch input:checked + .toggle-slider:before {
-    @apply transform translate-x-5;
-  }
-
-  .toggle-switch input:focus + .toggle-slider {
-    @apply ring-2 ring-blue-300 ring-offset-1;
+  .toggle-dot {
+    @apply absolute left-[2px] top-[2px] bg-white rounded-full h-4 w-4 transition-transform duration-200 ease-in-out;
   }
 }
 
-/* Custom scrollbar for popup */
+/* Custom scrollbar and base popup styles */
+html {
+  width: 340px;
+  margin: 0;
+  padding: 0;
+  background-color: #f8fafc; /* Matches slate-50 */
+}
+
+html.dark {
+  background-color: #090a0f;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 340px;
+  overflow-x: hidden;
+  background: transparent !important;
+}
+
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  background: transparent !important;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -56,7 +74,8 @@
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
   margin-bottom: 1rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 

@@ -5,7 +5,7 @@ let intentVerified = false;
 
 /**
  * Creates and manages the Intent Wall overlay
- * Now simplified to prompt use of the native YouTube search bar
+ * Now fully minimalist - just a blank slate to prevent homepage distractions.
  */
 export function showIntentWall(): void {
   const settings = getSettings();
@@ -31,18 +31,16 @@ export function showIntentWall(): void {
                  window.matchMedia('(prefers-color-scheme: dark)').matches;
   if (isDark) wall.classList.add('dark');
 
+  // EMPTY CONTENT: Just a blank slate as requested
   wall.innerHTML = `
     <div class="intent-content">
-      <div class="intent-icon">🎯</div>
-      <div class="intent-header">What is your goal today?</div>
-      <div class="intent-subheader">Use the search bar at the top to start your focused session.</div>
-      <div class="intent-arrow">↑</div>
+      <!-- Minimalist blank space -->
     </div>
   `;
 
   document.body.appendChild(wall);
   
-  // Add a listener to the native YouTube search form to hide the wall when user searches
+  // Keep the listener so it disappears once user searches
   setupNativeSearchListener();
 }
 

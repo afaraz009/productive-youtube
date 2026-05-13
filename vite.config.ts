@@ -40,6 +40,7 @@ export default defineConfig({
           return "[name].js";
         },
         chunkFileNames: "[name].js",
+        manualChunks: undefined, // Ensure all code for an entry is in that entry file
         assetFileNames: (assetInfo) => {
           if (assetInfo.name === "popup.html") {
             return "popup.html";

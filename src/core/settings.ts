@@ -3,11 +3,12 @@ import { Settings } from "../types/types";
 // Default settings
 const defaultSettings: Settings = {
   mode: 'focus',
+  transcriptLanguage: 'english',
   removeShorts: true,
   removeShortsButton: true,
   removeHomepageVideos: true,
   removeWatchPageSuggestions: true,
-  showTranscript: false,
+  showTranscript: true,
   enableIntentWall: true,
   removeComments: true,
 
@@ -50,8 +51,11 @@ If relevant, include brief sections on:
 - Key questions addressed or left unanswered
 
 Format all hyperlinks properly to ensure they are clickable and lead to the correct timestamp in the video.`,
-    vocabulary: "Find all difficult words and create a table of English to Urdu and English to English meaning"
-  }
+    vocabulary: "Find all difficult words and create a table of English to Urdu and English to English meaning",
+    urduScript: "This transcript is currently in Hindi script (Devanagari). Please convert it exactly into Urdu script (Nastaliq style) so Pakistani users can read it easily. Keep the timestamps and the same format.",
+    romanUrdu: "Please transliterate this transcript into Roman Urdu (using English alphabets). Example: 'Kaisa hai' instead of 'کیسا ہے'. Keep the timestamps and the same format."
+  },
+  theme: 'dark'
 };
 
 // Internal settings cache

@@ -1,34 +1,45 @@
 import React, { useState, useEffect } from "react";
+import { Settings, AIService, ExtensionMode } from "../types/types";
 import {
-  Settings,
-  AIService,
-  AIPrompts,
-  ExtensionMode,
-} from "../types/types";
+  Settings2,
+  Cpu,
+  Home,
+  Layout,
+  MessageSquare,
+  Video,
+  FileText,
+  Shield,
+  Zap,
+  Coffee,
+  ChevronDown,
+  Check,
+  Moon,
+  Sun,
+  Sparkles,
+} from "lucide-react";
 
 const ToggleSwitch: React.FC<{
   id: string;
   label: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
-  description?: string;
-}> = ({ id, label, checked, onChange, description }) => {
+  icon: React.ElementType;
+}> = ({ id, label, checked, onChange, icon: Icon }) => {
   return (
-    <div className="flex items-start justify-between py-2.5 group">
-      <div className="flex-1 pr-3">
-        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 block">
+    <div className="toggle-row group">
+      <div className="flex items-center gap-3">
+        <div
+          className={`p-2 rounded-lg transition-colors ${checked ? "bg-emerald-500/10 text-emerald-500" : "bg-slate-200 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300"}`}
+        >
+          <Icon size={16} strokeWidth={2.5} />
+        </div>
+        <span
+          className={`text-[13px] font-semibold transition-colors ${checked ? "text-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200"}`}
+        >
           {label}
         </span>
-        {description && (
-          <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 block leading-relaxed">
-            {description}
-          </span>
-        )}
       </div>
-      <label
-        htmlFor={id}
-        className="relative inline-flex items-center cursor-pointer mt-0.5 flex-shrink-0"
-      >
+      <label htmlFor={id} className="toggle-pill relative">
         <input
           type="checkbox"
           id={id}
@@ -36,365 +47,349 @@ const ToggleSwitch: React.FC<{
           onChange={(e) => onChange(e.target.checked)}
           className="sr-only peer"
         />
-        <div className="w-10 h-6 bg-slate-300 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-indigo-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-slate-400 dark:after:border-slate-500 after:border-2 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-indigo-500 peer-checked:to-indigo-600 dark:peer-checked:from-indigo-600 dark:peer-checked:to-indigo-700 shadow-sm"></div>
+        <div
+          className={`w-full h-full rounded-full transition-colors duration-200 ${checked ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" : "bg-slate-300 dark:bg-slate-700/50"}`}
+        ></div>
+        <div
+          className={`toggle-dot shadow-sm transform transition-transform duration-200 ${checked ? "translate-x-4" : "translate-x-0"}`}
+        ></div>
       </label>
     </div>
   );
 };
 
-const ModeButton: React.FC<{
-  mode: ExtensionMode;
+const ModeCard: React.FC<{
   active: boolean;
   onClick: () => void;
   label: string;
-  icon: string;
+  icon: React.ElementType;
   description: string;
-}> = ({ active, onClick, label, icon, description }) => {
+  color: "blue" | "amber";
+}> = ({ active, onClick, label, icon: Icon, description, color }) => {
+  const activeClasses =
+    color === "blue"
+      ? "border-blue-500/50 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.15)]"
+      : "border-amber-500/50 bg-amber-500/10 shadow-[0_0_20px_rgba(245,158,11,0.15)]";
+
+  const iconBg = color === "blue" ? "bg-blue-500" : "bg-amber-500";
+
+  return (
+    <div
+      onClick={onClick}
+      className={`relative flex flex-col items-center p-4 rounded-2xl transition-all cursor-pointer border-2 h-full ${
+        active
+          ? activeClasses
+          : "bg-black/5 dark:bg-white/5 border-transparent dark:border-white/5 hover:border-black/10 dark:hover:border-white/10 hover:bg-black/[0.08] dark:hover:bg-white/[0.07]"
+      }`}
+    >
+      <div
+        className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 shadow-lg ${active ? iconBg : "bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400"}`}
+      >
+        <Icon
+          size={24}
+          strokeWidth={2.5}
+          className={active ? "text-white" : ""}
+        />
+      </div>
+
+      <h3
+        className={`text-[14px] font-bold mb-1 ${active ? "text-blue-600 dark:text-white" : "text-slate-600 dark:text-slate-400"}`}
+      >
+        {label}
+      </h3>
+      <p className="text-[10px] text-slate-500 text-center leading-tight font-medium px-1">
+        {description}
+      </p>
+
+      {active && (
+        <div
+          className={`absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-[#090a0f] ${iconBg}`}
+        >
+          <Check size={10} strokeWidth={4} className="text-white" />
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ActionItem: React.FC<{
+  label: string;
+  description: string;
+  icon: React.ElementType;
+  isOpen: boolean;
+  onClick: () => void;
+}> = ({ label, description, icon: Icon, isOpen, onClick }) => {
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center p-3.5 rounded-2xl transition-all border-2 ${
-        active
-          ? "bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-500 dark:from-indigo-950/40 dark:to-blue-950/40 dark:border-indigo-400 shadow-md dark:shadow-lg"
-          : "bg-white/60 border-transparent hover:bg-slate-100/60 dark:bg-slate-800/40 dark:hover:bg-slate-700/60 border-slate-100 dark:border-slate-700"
+      className={`w-full flex items-center p-3.5 rounded-2xl transition-all group border ${
+        isOpen
+          ? "bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 shadow-lg"
+          : "bg-transparent border-transparent hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
       }`}
     >
-      <span className="text-2xl mb-2">{icon}</span>
-      <span
-        className={`text-xs font-bold transition-colors ${
-          active
-            ? "text-indigo-700 dark:text-indigo-300"
-            : "text-slate-700 dark:text-slate-300"
+      <div
+        className={`w-10 h-10 rounded-xl flex items-center justify-center mr-3.5 transition-colors ${
+          isOpen
+            ? "bg-blue-500/20 text-blue-600 dark:text-blue-400"
+            : "bg-slate-200 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300"
         }`}
       >
-        {label}
-      </span>
-      <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 text-center leading-tight">
-        {description}
-      </span>
+        <Icon size={20} strokeWidth={2} />
+      </div>
+      <div className="flex-1 text-left">
+        <div className="flex items-center justify-between">
+          <span
+            className={`text-[14px] font-bold ${isOpen ? "text-slate-900 dark:text-white" : "text-slate-700 dark:text-slate-300"}`}
+          >
+            {label}
+          </span>
+          <ChevronDown
+            size={16}
+            className={`text-slate-400 dark:text-slate-500 transition-transform duration-300 ${isOpen ? "rotate-180 text-blue-600 dark:text-blue-400" : ""}`}
+          />
+        </div>
+        <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+          {description}
+        </div>
+      </div>
     </button>
   );
 };
 
 const PopupApp: React.FC = () => {
-  const defaultSettings: Settings = {
-    mode: "focus",
-    removeShorts: true,
-    removeShortsButton: true,
-    removeHomepageVideos: true,
-    removeWatchPageSuggestions: true,
-    showTranscript: false,
-
-    // AI Settings
-    aiService: "chatgpt",
-    aiPrompts: {
-      translate:
-        "Translate the following transcript in urdu. Keep the timestamps and the same format in translated content",
-      summarize: `# YouTube Video Summary Generator
-
-## Instructions
-You will be provided with the Title, URL, and Transcript of a YouTube video.
-Create a comprehensive yet accessible summary with the following structure:
-
-### Video:
-Create a clickable hyperlink using the video Title as the link text and the URL as the destination.
-
-### TL;DR:
-Provide a concise summary (1-3 sentences) capturing the essential message or purpose of the video.
-
-### Key Points:
-List 3-7 core ideas, arguments, or insights presented in the video. Each point should be:
-- One to three sentences in length
-- Specific enough to convey meaningful information
-- Written in clear, straightforward language
-
-### Detailed Summary with Timestamps:
-Write a comprehensive summary of the video content in 5-20 bullet points, depending on the video length and complexity.
-- Each point should begin with a timestamp (formatted as [mm:ss](URL&t=XXXs)) where XXX is the number of seconds into the video
-- Each summary point should:
-  - Cover a distinct topic, segment, or idea from the video
-  - Be 2-4 sentences long, providing context and specific details
-  - Include relevant examples, data points, or quotes when appropriate
-  - Avoid vague generalizations; instead, capture the actual substance of what was discussed
-  - Use plain language while preserving any essential technical terms
-
-### Additional Context (Optional):
-If relevant, include brief sections on:
-- Background information needed to understand the topic
-- Related resources mentioned in the video
-- Key questions addressed or left unanswered
-
-Format all hyperlinks properly to ensure they are clickable and lead to the correct timestamp in the video.`,
-      vocabulary:
-        "Find all difficult words and create a table of English to Urdu and English to English meaning",
-    },
-  };
-
-  const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showAISettings, setShowAISettings] = useState(false);
 
-  // Load settings from Chrome storage
   useEffect(() => {
     if (typeof chrome !== "undefined" && chrome.storage) {
-      const keys = Object.keys(defaultSettings);
-      chrome.storage.local.get(keys, (result) => {
-        const loadedSettings = { ...defaultSettings };
-        keys.forEach((key) => {
-          if (result[key] !== undefined) {
-            (loadedSettings as any)[key] = result[key];
-          }
-        });
-        setSettings(loadedSettings);
+      chrome.storage.local.get(null, (result) => {
+        setSettings(result as Settings);
       });
     }
   }, []);
 
-  // Mode change handler
+  // Restore live theme updating
+  useEffect(() => {
+    if (settings?.theme) {
+      if (settings.theme === "dark") {
+        document.documentElement.classList.add("dark");
+        document.documentElement.setAttribute("data-theme", "dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    }
+  }, [settings?.theme]);
+
   const handleModeChange = (mode: ExtensionMode) => {
-    let newSettings = { ...settings, mode };
+    if (!settings) return;
+    const newSettings = { ...settings, mode };
 
-    // Auto-close menus on mode change
-    setShowAdvanced(false);
-    setShowAISettings(false);
-
-    // Auto-configure based on mode
     if (mode === "focus") {
-      newSettings.removeShorts = true;
-      newSettings.removeShortsButton = true;
-      newSettings.removeHomepageVideos = true;
-      newSettings.removeWatchPageSuggestions = true;
-      newSettings.showTranscript = true;
-      newSettings.removeComments = true;
-    } else if (mode === "learn") {
-      newSettings.removeShorts = true;
-      newSettings.removeShortsButton = true;
-      newSettings.removeHomepageVideos = true;
-      newSettings.removeWatchPageSuggestions = true;
-      newSettings.showTranscript = true;
-      newSettings.removeComments = true;
-    } else if (mode === "relax") {
-      newSettings.removeShorts = false;
-      newSettings.removeShortsButton = false;
-      newSettings.removeHomepageVideos = false;
-      newSettings.removeWatchPageSuggestions = false;
-      newSettings.showTranscript = false;
-      newSettings.removeComments = false;
+      Object.assign(newSettings, {
+        removeShorts: true,
+        removeShortsButton: true,
+        removeHomepageVideos: true,
+        removeWatchPageSuggestions: true,
+        showTranscript: true,
+        removeComments: true,
+      });
+    } else {
+      Object.assign(newSettings, {
+        removeShorts: false,
+        removeShortsButton: false,
+        removeHomepageVideos: false,
+        removeWatchPageSuggestions: false,
+        showTranscript: false,
+        removeComments: false,
+      });
     }
 
     setSettings(newSettings);
-    if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.local.set(newSettings, () => {
-        // Auto-close popup after mode selection to return user to YouTube
-        setTimeout(() => window.close(), 150);
-      });
-    }
+    chrome.storage.local.set(newSettings, () => {
+      setTimeout(() => window.close(), 200);
+    });
   };
 
-  // Generic toggle handler
-  const handleToggle = (key: keyof Settings, value: boolean) => {
+  const handleToggle = (key: keyof Settings, value: any) => {
+    if (!settings) return;
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
-
-    if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.local.set({ [key]: value });
-    }
+    chrome.storage.local.set({ [key]: value });
   };
 
-  // AI Service handler
-  const handleAIServiceChange = (value: AIService) => {
-    const newSettings = { ...settings, aiService: value };
-    setSettings(newSettings);
-
-    if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.local.set({ aiService: value }, () => {
-        // Auto-close after preference selection
-        setTimeout(() => window.close(), 150);
-      });
-    }
+  const toggleTheme = () => {
+    if (!settings) return;
+    const newTheme = settings.theme === "dark" ? "light" : "dark";
+    handleToggle("theme", newTheme);
   };
 
-  // AI Prompt handler
-  const handlePromptChange = (promptType: keyof AIPrompts, value: string) => {
-    const newPrompts = { ...settings.aiPrompts, [promptType]: value };
-    const newSettings = { ...settings, aiPrompts: newPrompts };
-    setSettings(newSettings);
-
-    if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.local.set({ aiPrompts: newPrompts });
-    }
-  };
+  if (!settings)
+    return (
+      <div className="w-[340px] bg-slate-50 dark:bg-[#090a0f] flex items-center rounded-[20px] justify-center overflow-hidden p-12">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
 
   return (
-    <div className="w-80 max-h-[600px] pb-4 overflow-y-auto font-sans text-sm bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950">
-      <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200/50 dark:border-slate-800/50 px-4 py-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h1 className="text-base font-bold bg-gradient-to-r from-indigo-600 to-blue-600 dark:from-indigo-400 dark:to-blue-400 bg-clip-text text-transparent">
-            Productive YouTube
-          </h1>
-          <div className="flex items-center space-x-2 px-3 py-1.5 bg-gradient-to-r from-indigo-100 to-blue-100 dark:from-indigo-950/50 dark:to-blue-950/50 rounded-full border border-indigo-200/50 dark:border-indigo-800/50 shadow-sm">
-            <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
-            <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
-              Active
-            </span>
+    <div className="w-[340px] bg-slate-50 dark:bg-[#090a0f] text-slate-900 dark:text-white font-sans antialiased overflow-hidden p-6 select-none relative transition-colors duration-300 shadow-2xl rounded-[24px] ring-1 ring-black/5 dark:ring-white/10">
+      {/* Background Glow */}
+      <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-600/10 dark:bg-blue-600/10 blur-[100px] rounded-full pointer-events-none"></div>
+      <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-600/10 dark:bg-emerald-600/10 blur-[100px] rounded-full pointer-events-none"></div>
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/20 ring-1 ring-white/10">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+              <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l6 4-6 4z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-[16px] font-black tracking-tight text-slate-900 dark:text-white leading-none">
+              Focus
+            </h1>
+            <p className="text-[10px] font-bold text-slate-500 tracking-[0.1em] uppercase mt-1">
+              Tube
+            </p>
           </div>
         </div>
+        <button
+          onClick={toggleTheme}
+          className="w-10 h-10 rounded-2xl bg-black/5 dark:bg-white/5 flex items-center justify-center text-slate-500 dark:text-slate-400 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all ring-1 ring-black/5 dark:ring-white/5"
+        >
+          {settings.theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
       </div>
 
-      <div className="p-4">
-        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3.5 block text-center">
-          Select Your Environment
-        </label>
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <ModeButton
-            mode="focus"
-            active={settings.mode === "focus"}
-            onClick={() => handleModeChange("focus")}
-            label="Focus"
-            icon="🚀"
-            description="Block & Learn"
-          />
-          <ModeButton
-            mode="relax"
-            active={settings.mode === "relax"}
-            onClick={() => handleModeChange("relax")}
-            label="Relax"
-            icon="☕"
-            description="Default View"
-          />
-        </div>
+      <div className="space-y-7 relative z-10">
+        {/* Environment Section */}
+        <div>
+          <div className="flex items-center gap-2 mb-4 px-1">
+            <Sparkles size={14} className="text-blue-500 dark:text-blue-400" />
+            <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">
+              Select Mode
+            </h2>
+          </div>
 
-        {/* Custom Blockers Section */}
-        <button
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="w-full flex items-center justify-between py-3 px-4 rounded-xl bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 text-slate-800 dark:text-slate-200 hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition-all shadow-sm hover:shadow-md"
-        >
-          <span className="text-xs font-semibold uppercase tracking-wider flex items-center">
-            <span className="mr-2.5 text-lg">⚙️</span> Custom Blockers
-          </span>
-          <span
-            className={`transition-transform duration-300 text-slate-500 ${showAdvanced ? "rotate-180" : ""}`}
-          >
-            ▼
-          </span>
-        </button>
-
-        {showAdvanced && (
-          <div className="mt-2 space-y-2 px-1 bg-white/50 dark:bg-slate-800/40 rounded-xl border border-slate-200/50 dark:border-slate-700/50 p-3 backdrop-blur-sm">
-            <ToggleSwitch
-              id="shorts-toggle"
-              label="Shorts Shelves"
-              checked={settings.removeShorts}
-              onChange={(val) => handleToggle("removeShorts", val)}
+          <div className="grid grid-cols-2 gap-4">
+            <ModeCard
+              active={settings.mode === "focus"}
+              onClick={() => handleModeChange("focus")}
+              label="Focus"
+              icon={Zap}
+              description="Deep Work Only"
+              color="blue"
             />
-            <ToggleSwitch
-              id="shorts-button-toggle"
-              label="Shorts Sidebar Button"
-              checked={settings.removeShortsButton}
-              onChange={(val) => handleToggle("removeShortsButton", val)}
-            />
-            <ToggleSwitch
-              id="homepage-toggle"
-              label="Homepage Videos"
-              checked={settings.removeHomepageVideos}
-              onChange={(val) => handleToggle("removeHomepageVideos", val)}
-            />
-            <ToggleSwitch
-              id="suggestions-toggle"
-              label="Sidebar Suggestions"
-              checked={settings.removeWatchPageSuggestions}
-              onChange={(val) =>
-                handleToggle("removeWatchPageSuggestions", val)
-              }
-            />
-            <ToggleSwitch
-              id="transcript-toggle"
-              label="Auto-Transcript"
-              checked={settings.showTranscript}
-              onChange={(val) => handleToggle("showTranscript", val)}
-            />
-            <ToggleSwitch
-              id="intent-wall-toggle"
-              label="Mental Intent Wall"
-              checked={settings.enableIntentWall}
-              onChange={(val) => handleToggle("enableIntentWall", val)}
-            />
-            <ToggleSwitch
-              id="comments-toggle"
-              label="Hide Comments"
-              checked={settings.removeComments}
-              onChange={(val) => handleToggle("removeComments", val)}
+            <ModeCard
+              active={settings.mode === "relax"}
+              onClick={() => handleModeChange("relax")}
+              label="Relax"
+              icon={Coffee}
+              description="Default View"
+              color="amber"
             />
           </div>
-        )}
+        </div>
 
-        {/* AI Settings Section */}
-        <div className="mt-4">
-          <button
-            onClick={() => setShowAISettings(!showAISettings)}
-            className="w-full flex items-center justify-between py-3 px-4 rounded-xl bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 text-slate-800 dark:text-slate-200 hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition-all shadow-sm hover:shadow-md"
-          >
-            <span className="text-xs font-semibold uppercase tracking-wider flex items-center">
-              <span className="mr-2.5 text-lg">🤖</span> AI Preferences
-            </span>
-            <span
-              className={`transition-transform duration-300 text-slate-500 ${showAISettings ? "rotate-180" : ""}`}
-            >
-              ▼
-            </span>
-          </button>
+        {/* Action List */}
+        <div className="space-y-2">
+          <ActionItem
+            label="Settings"
+            description="Personalize your distractions"
+            icon={Settings2}
+            isOpen={showAdvanced}
+            onClick={() => {
+              setShowAdvanced(!showAdvanced);
+              setShowAISettings(false);
+            }}
+          />
+          {showAdvanced && (
+            <div className="mx-1 mt-1 p-2.5 bg-black/[0.03] dark:bg-white/[0.03] rounded-2xl border border-black/5 dark:border-white/5 space-y-1 animate-in fade-in slide-in-from-top-2 duration-300">
+              <ToggleSwitch
+                id="shorts"
+                label="Hide Shorts"
+                icon={Video}
+                checked={settings.removeShorts}
+                onChange={(v) => handleToggle("removeShorts", v)}
+              />
+              <ToggleSwitch
+                id="feed"
+                label="Hide Homepage"
+                icon={Home}
+                checked={settings.removeHomepageVideos}
+                onChange={(v) => handleToggle("removeHomepageVideos", v)}
+              />
+              <ToggleSwitch
+                id="sidebar"
+                label="Hide Sidebar"
+                icon={Layout}
+                checked={settings.removeWatchPageSuggestions}
+                onChange={(v) => handleToggle("removeWatchPageSuggestions", v)}
+              />
+              <ToggleSwitch
+                id="comments"
+                label="Hide Comments"
+                icon={MessageSquare}
+                checked={settings.removeComments}
+                onChange={(v) => handleToggle("removeComments", v)}
+              />
+              <ToggleSwitch
+                id="transcript"
+                label="AI Transcript"
+                icon={FileText}
+                checked={settings.showTranscript}
+                onChange={(v) => handleToggle("showTranscript", v)}
+              />
+              <ToggleSwitch
+                id="intent"
+                label="Intent Wall"
+                icon={Shield}
+                checked={settings.enableIntentWall}
+                onChange={(v) => handleToggle("enableIntentWall", v)}
+              />
+            </div>
+          )}
 
+          <ActionItem
+            label="AI Setting"
+            description="Configure AI provider"
+            icon={Cpu}
+            isOpen={showAISettings}
+            onClick={() => {
+              setShowAISettings(!showAISettings);
+              setShowAdvanced(false);
+            }}
+          />
           {showAISettings && (
-            <div className="mt-2 space-y-4 px-4 py-4 bg-white/50 dark:bg-slate-800/40 rounded-xl border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
-              {/* AI Service Selector */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-2">
-                  Preferred AI
-                </label>
+            <div className="mx-1 mt-1 p-4 bg-black/[0.03] dark:bg-white/[0.03] rounded-2xl border border-black/5 dark:border-white/5 animate-in fade-in slide-in-from-top-2 duration-300">
+              <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-1">
+                Active Provider
+              </label>
+              <div className="relative">
                 <select
                   value={settings.aiService}
-                  onChange={(e) =>
-                    handleAIServiceChange(e.target.value as AIService)
-                  }
-                  className="w-full px-3 py-2.5 text-xs border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-medium shadow-sm"
+                  onChange={(e) => {
+                    const val = e.target.value as AIService;
+                    handleToggle("aiService", val as any);
+                    setTimeout(() => window.close(), 150);
+                  }}
+                  className="w-full pl-4 pr-10 py-3 text-[13px] bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:border-blue-500/50 text-slate-700 dark:text-slate-200 font-bold appearance-none cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >
-                  <option value="chatgpt">ChatGPT</option>
+                  <option value="chatgpt">OpenAI ChatGPT</option>
                   <option value="gemini">Google Gemini</option>
-                  <option value="claude">Claude AI</option>
-                  <option value="grok">Grok</option>
+                  <option value="claude">Anthropic Claude</option>
+                  <option value="grok">xAI Grok</option>
                 </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 dark:text-slate-500">
+                  <ChevronDown size={16} />
+                </div>
               </div>
-
-              {/* Reset Button */}
-              <button
-                onClick={() => {
-                  handleAIServiceChange(defaultSettings.aiService);
-                  handlePromptChange(
-                    "translate",
-                    defaultSettings.aiPrompts.translate,
-                  );
-                  handlePromptChange(
-                    "summarize",
-                    defaultSettings.aiPrompts.summarize,
-                  );
-                  handlePromptChange(
-                    "vocabulary",
-                    defaultSettings.aiPrompts.vocabulary,
-                  );
-                  // Auto-close after reset
-                  setTimeout(() => window.close(), 200);
-                }}
-                className="w-full px-3 py-2.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100/80 dark:bg-indigo-950/40 hover:bg-indigo-200/80 dark:hover:bg-indigo-900/40 rounded-lg transition-colors uppercase tracking-widest border border-indigo-200/50 dark:border-indigo-800/50 shadow-sm"
-              >
-                Reset AI Defaults
-              </button>
             </div>
           )}
         </div>
-      </div>
-
-      <div className="text-[10px] text-slate-500 dark:text-slate-400 text-center mt-4 px-4 italic leading-relaxed font-medium">
-        "Your focus determines your reality." • v2.0.3
       </div>
     </div>
   );

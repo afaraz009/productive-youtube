@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Productive YouTube - Focus & Distraction Blocker",
+  "name": "Focus Tube - Distraction Blocker",
   "version": "2.0.3",
   "description": "Transform YouTube into a productivity tool. Block Shorts, autoplay, suggestions, and more. Stay focused on what matters.",
   "permissions": ["storage", "tabs", "scripting"],
@@ -28,7 +28,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Productive YouTube"
+    "default_title": "Focus Tube"
   },
   "icons": {
     "16": "icons/icon16.png",
