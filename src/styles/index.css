@@ -30,19 +30,19 @@ html {
   width: 340px;
   margin: 0;
   padding: 0;
-  background-color: #f8fafc; /* Matches slate-50 */
+  background-color: #f8fafc !important; /* Matches Light Mode bg-slate-50 */
+  color-scheme: light dark;
 }
 
 html.dark {
-  background-color: #090a0f;
+  background-color: #090a0f !important; /* Matches Dark Mode */
 }
 
 body {
   margin: 0;
   padding: 0;
   width: 340px;
-  overflow-x: hidden;
-  background: transparent !important;
+  background-color: transparent !important;
 }
 
 #root {

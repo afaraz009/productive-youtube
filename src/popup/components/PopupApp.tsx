@@ -234,13 +234,13 @@ const PopupApp: React.FC = () => {
     );
 
   return (
-    <div className="w-[340px] bg-slate-50 dark:bg-[#090a0f] text-slate-900 dark:text-white font-sans antialiased overflow-hidden p-6 select-none relative transition-colors duration-300 shadow-2xl rounded-[24px] ring-1 ring-black/5 dark:ring-white/10">
+    <div className="w-[340px] bg-slate-50 dark:bg-[#090a0f] text-slate-900 dark:text-white font-sans antialiased px-6 pt-6 pb-5 select-none relative transition-colors duration-300 overflow-hidden">
       {/* Background Glow */}
       <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-600/10 dark:bg-blue-600/10 blur-[100px] rounded-full pointer-events-none"></div>
       <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-600/10 dark:bg-emerald-600/10 blur-[100px] rounded-full pointer-events-none"></div>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 relative z-10">
+      <div className="flex items-center justify-between mb-7 relative z-10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/20 ring-1 ring-white/10">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
@@ -264,7 +264,7 @@ const PopupApp: React.FC = () => {
         </button>
       </div>
 
-      <div className="space-y-7 relative z-10">
+      <div className="space-y-6 relative z-10">
         {/* Environment Section */}
         <div>
           <div className="flex items-center gap-2 mb-4 px-1">
