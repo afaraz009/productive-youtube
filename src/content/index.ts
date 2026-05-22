@@ -6,7 +6,6 @@ import { removeShorts, throttledRemoveShorts } from "../features/blockers/shorts
 import { removeHomepageVideos, throttledRemoveHomepageVideos } from "../features/blockers/homepage";
 import { removeVideoSuggestions, throttledRemoveVideoSuggestions } from "../features/blockers/suggestions";
 import { removeShortsButton, throttledRemoveShortsButton } from "../features/blockers/shortsButton";
-import { showIntentWall, removeIntentWall } from "../features/blockers/intentWall";
 import { removeComments, throttledRemoveComments } from "../features/blockers/comments";
 import { showVideoTranscript, cleanupTranscript, isWatchPage, isHomePage } from "../features/transcript";
 
@@ -77,23 +76,21 @@ function handleInitialLoad() {
 function updateCSSOverrides(): void {
   const settings = getSettings();
   const html = document.documentElement;
-  const setClass = (cls: string, active: boolean) => active ? html.classList.remove(cls) : html.classList.add(cls);
+  const setHideClass = (cls: string, shouldHide: boolean) => shouldHide ? html.classList.add(cls) : html.classList.remove(cls);
 
-  setClass("show-shorts", settings.removeShorts);
-  setClass("show-shorts-button", settings.removeShortsButton);
-  setClass("show-homepage", settings.removeHomepageVideos);
-  setClass("show-suggestions", settings.removeWatchPageSuggestions);
-  setClass("show-comments", settings.removeComments);
+  setHideClass("hide-shorts", settings.removeShorts);
+  setHideClass("hide-shorts-button", settings.removeShortsButton);
+  setHideClass("hide-homepage", settings.removeHomepageVideos);
+  setHideClass("hide-suggestions", settings.removeWatchPageSuggestions);
+  setHideClass("hide-comments", settings.removeComments);
 }
 
 function applyAllRemovals(): void {
   removeShorts();
   removeShortsButton();
-  showIntentWall();
   removeComments();
 
   if (isWatchPage()) {
-    removeIntentWall();
     const videoId = new URLSearchParams(window.location.search).get("v");
     if (videoId) lastVideoId = videoId;
     
@@ -109,7 +106,6 @@ function applyAllRemovalsThrottled(): void {
   throttledRemoveShorts();
   throttledRemoveShortsButton();
   throttledRemoveComments();
-  showIntentWall();
 
   if (isWatchPage()) {
     throttledRemoveVideoSuggestions();
@@ -120,7 +116,6 @@ function applyAllRemovalsThrottled(): void {
 
 function handleYouTubeNavigation(): void {
   if (isWatchPage()) {
-    removeIntentWall();
     const videoId = new URLSearchParams(window.location.search).get("v");
 
     if (videoId && videoId !== lastVideoId) {
@@ -131,7 +126,6 @@ function handleYouTubeNavigation(): void {
   } else {
     lastVideoId = null;
     cleanupTranscript();
-    if (isHomePage()) showIntentWall();
   }
 }
 

@@ -1,204 +1,78 @@
 /* 
   Static Blocker CSS 
-  This file is injected at 'document_start' to hide distracting elements 
-  instantly before they even render, preventing the "flicker" effect.
+  This file uses a "Hide-On-Demand" architecture.
+  Rules only activate when specific 'hide-' classes are present on the <html> tag.
 */
 
 /* 1. Shorts Blocking */
-ytd-reel-shelf-renderer,
-ytd-rich-shelf-renderer[is-shorts],
-[aria-label*="Shorts"],
-ytd-shells-renderer,
-#dismissible[class*="shorts"] {
+html.hide-shorts ytd-reel-shelf-renderer,
+html.hide-shorts ytd-rich-shelf-renderer[is-shorts],
+html.hide-shorts [aria-label*="Shorts"],
+html.hide-shorts ytd-shells-renderer,
+html.hide-shorts #dismissible[class*="shorts"] {
   display: none !important;
 }
 
 /* 2. Shorts Sidebar Button */
-ytd-guide-entry-renderer:has(a[href="/shorts"]),
-ytd-mini-guide-entry-renderer:has(a[href="/shorts"]),
-ytd-guide-entry-renderer:has([title="Shorts"]),
-ytd-mini-guide-entry-renderer:has([title="Shorts"]),
-a[href="/shorts"],
-a[title="Shorts"],
-#guide-icon[href*="/shorts"] {
+html.hide-shorts-button ytd-guide-entry-renderer:has(a[href="/shorts"]),
+html.hide-shorts-button ytd-mini-guide-entry-renderer:has(a[href="/shorts"]),
+html.hide-shorts-button ytd-guide-entry-renderer:has([title="Shorts"]),
+html.hide-shorts-button ytd-mini-guide-entry-renderer:has([title="Shorts"]),
+html.hide-shorts-button a[href="/shorts"],
+html.hide-shorts-button a[title="Shorts"],
+html.hide-shorts-button #guide-icon[href*="/shorts"] {
   display: none !important;
 }
 
 /* 3. Homepage Video Suggestions */
-ytd-browse[page-subtype="home"] ytd-rich-grid-renderer,
-ytd-browse[page-subtype="home"] ytd-rich-item-renderer,
-ytd-browse[page-subtype="home"] ytd-rich-grid-row {
+html.hide-homepage ytd-browse[page-subtype="home"] ytd-rich-grid-renderer,
+html.hide-homepage ytd-browse[page-subtype="home"] ytd-rich-item-renderer,
+html.hide-homepage ytd-browse[page-subtype="home"] ytd-rich-grid-row {
   display: none !important;
 }
 
 /* 4. Watch Page Suggestions (Right Sidebar) */
-#secondary-inner ytd-compact-video-renderer,
-#secondary-inner ytd-compact-playlist-renderer,
-#secondary-inner ytd-reel-shelf-renderer,
-ytd-watch-next-secondary-results-renderer,
-#related ytd-video-renderer,
-#related ytd-compact-video-renderer,
-#related ytd-reel-shelf-renderer {
+html.hide-suggestions #secondary-inner ytd-compact-video-renderer,
+html.hide-suggestions #secondary-inner ytd-compact-playlist-renderer,
+html.hide-suggestions #secondary-inner ytd-reel-shelf-renderer,
+html.hide-suggestions ytd-watch-next-secondary-results-renderer,
+html.hide-suggestions #related ytd-video-renderer,
+html.hide-suggestions #related ytd-compact-video-renderer,
+html.hide-suggestions #related ytd-reel-shelf-renderer,
+html.hide-suggestions .ytd-watch-next-secondary-results-renderer #items ytd-video-renderer,
+html.hide-suggestions .ytd-watch-next-secondary-results-renderer #items ytd-compact-video-renderer,
+html.hide-suggestions ytd-continuation-item-renderer:has(#related),
+html.hide-suggestions #related {
   display: none !important;
 }
 
 /* 5. Video End Wall Suggestions */
-.ytp-suggestion-set,
-.ytp-videowall-still,
-.ytp-show-tiles,
-div.ytp-pause-overlay {
+html.hide-suggestions .ytp-suggestion-set,
+html.hide-suggestions .ytp-videowall-still,
+html.hide-suggestions .ytp-show-tiles,
+html.hide-suggestions div.ytp-pause-overlay {
   display: none !important;
 }
 
 /* 6. Comments Blocking */
-ytd-comments,
-#comments,
-ytd-comments-renderer,
-ytd-comment-thread-renderer,
-ytd-comments-header-renderer,
-#comments ytd-comments-renderer,
-#comments ytd-comment-thread-renderer,
-#comments ytd-comments-header-renderer,
-#sections.ytd-comments,
-ytd-item-section-renderer:has(#comments) {
+html.hide-comments ytd-comments,
+html.hide-comments #comments,
+html.hide-comments ytd-comments-renderer,
+html.hide-comments ytd-comment-thread-renderer,
+html.hide-comments ytd-comments-header-renderer,
+html.hide-comments #comments ytd-comments-renderer,
+html.hide-comments #comments ytd-comment-thread-renderer,
+html.hide-comments #comments ytd-comments-header-renderer,
+html.hide-comments #sections.ytd-comments,
+html.hide-comments ytd-item-section-renderer:has(#comments),
+html.hide-comments ytd-engagement-panel-section-list-renderer[target-id="comments"],
+html.hide-comments ytd-engagement-panel-section-list-renderer:has(#comments),
+html.hide-comments #engagement-panel-comments,
+html.hide-comments #comments-skeleton,
+html.hide-comments ytd-comments-entry-point-header-renderer,
+html.hide-comments #comment-teaser {
   display: none !important;
   visibility: hidden !important;
-  height: 0 !important;
-  overflow: hidden !important;
-}
-
-/* --- Toggle Overrides --- */
-/* These classes are added to the <html> tag via JS to "reveal" content if user disables a feature */
-
-html.show-shorts ytd-reel-shelf-renderer,
-html.show-shorts ytd-rich-shelf-renderer[is-shorts],
-html.show-shorts [aria-label*="Shorts"],
-html.show-shorts ytd-shells-renderer,
-html.show-shorts #dismissible[class*="shorts"] {
-  display: block !important;
-}
-
-html.show-shorts-button ytd-guide-entry-renderer:has(a[href="/shorts"]),
-html.show-shorts-button ytd-mini-guide-entry-renderer:has(a[href="/shorts"]),
-html.show-shorts-button a[href="/shorts"] {
-  display: flex !important;
-}
-
-html.show-homepage ytd-browse[page-subtype="home"] ytd-rich-grid-renderer,
-html.show-homepage ytd-browse[page-subtype="home"] ytd-rich-item-renderer,
-html.show-homepage ytd-browse[page-subtype="home"] ytd-rich-grid-row {
-  display: block !important;
-}
-
-html.show-suggestions #secondary-inner ytd-compact-video-renderer,
-html.show-suggestions #secondary-inner ytd-compact-playlist-renderer,
-html.show-suggestions #secondary-inner ytd-reel-shelf-renderer,
-html.show-suggestions ytd-watch-next-secondary-results-renderer,
-html.show-suggestions #related ytd-video-renderer,
-html.show-suggestions #related ytd-compact-video-renderer,
-html.show-suggestions #related ytd-reel-shelf-renderer,
-html.show-suggestions #related {
-  display: block !important;
-}
-
-html.show-comments ytd-comments,
-html.show-comments #comments,
-html.show-comments ytd-comments-renderer,
-html.show-comments ytd-comment-thread-renderer,
-html.show-comments ytd-comments-header-renderer,
-html.show-comments #comments ytd-comments-renderer,
-html.show-comments #comments ytd-comment-thread-renderer,
-html.show-comments #comments ytd-comments-header-renderer,
-html.show-comments #sections.ytd-comments,
-html.show-comments ytd-item-section-renderer:has(#comments) {
-  display: block !important;
-  visibility: visible !important;
-  height: auto !important;
-}
-
-/* --- Intent Wall Overlay --- */
-#productive-intent-wall {
-    position: fixed;
-    top: 56px; /* Below YouTube Top Bar */
-    left: 0;
-    width: 100%;
-    height: calc(100vh - 56px);
-    background: #ffffff;
-    z-index: 100; /* Lower than sidebar and masthead */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-family: "YouTube Sans", Roboto, Arial, sans-serif;
-    transition: opacity 0.3s ease;
-}
-
-/* Move wall to the right when sidebar is expanded */
-ytd-app[guide-persistent-and-visible] #productive-intent-wall {
-    left: 240px;
-    width: calc(100% - 240px);
-}
-
-/* Move wall slightly when mini-sidebar is visible */
-ytd-app[mini-guide-visible] #productive-intent-wall {
-    left: 72px;
-    width: calc(100% - 72px);
-}
-
-[dark] #productive-intent-wall,
-html[dark] #productive-intent-wall {
-    background: #0f0f0f;
-    color: white;
-}
-
-.intent-content {
-    max-width: 600px;
-    width: 90%;
-    text-align: center;
-    animation: fadeIn 0.8s ease-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.intent-icon {
-    font-size: 64px;
-    margin-bottom: 24px;
-}
-
-.intent-header {
-    font-size: 42px;
-    font-weight: 800;
-    margin-bottom: 16px;
-    color: #0f0f0f;
-    letter-spacing: -1px;
-}
-
-[dark] .intent-header,
-html[dark] .intent-header {
-    color: #ffffff;
-}
-
-.intent-subheader {
-    font-size: 18px;
-    color: #606060;
-    margin-bottom: 40px;
-    line-height: 1.6;
-    font-weight: 400;
-}
-
-[dark] .intent-subheader,
-html[dark] .intent-subheader {
-    color: #aaaaaa;
-}
-
-.intent-arrow {
-    font-size: 48px;
-    color: #065fd4;
-    animation: bounce 2s infinite;
-    font-weight: 300;
 }
 
 @keyframes bounce {
@@ -206,4 +80,3 @@ html[dark] .intent-subheader {
     40% {transform: translateY(-20px);}
     60% {transform: translateY(-10px);}
 }
-

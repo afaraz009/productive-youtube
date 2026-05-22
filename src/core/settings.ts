@@ -9,7 +9,6 @@ const defaultSettings: Settings = {
   removeHomepageVideos: true,
   removeWatchPageSuggestions: true,
   showTranscript: true,
-  enableIntentWall: true,
   removeComments: true,
 
   // AI Settings

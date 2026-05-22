@@ -343,13 +343,6 @@ const PopupApp: React.FC = () => {
                 checked={settings.showTranscript}
                 onChange={(v) => handleToggle("showTranscript", v)}
               />
-              <ToggleSwitch
-                id="intent"
-                label="Intent Wall"
-                icon={Shield}
-                checked={settings.enableIntentWall}
-                onChange={(v) => handleToggle("enableIntentWall", v)}
-              />
             </div>
           )}
 

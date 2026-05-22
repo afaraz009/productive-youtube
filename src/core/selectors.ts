@@ -32,7 +32,6 @@ export const VIDEO_SUGGESTIONS_SELECTORS: string[] = [
   ".ytd-watch-next-secondary-results-renderer #items ytd-video-renderer",
   ".ytd-watch-next-secondary-results-renderer #items ytd-compact-video-renderer",
   "ytd-continuation-item-renderer:has(#related)",
-  "ytd-item-section-renderer:has(ytd-compact-video-renderer)",
 ];
 
 // Selectors for suggested videos on the homepage
@@ -73,4 +72,10 @@ export const COMMENT_SELECTORS: string[] = [
   "#sections.ytd-comments",
   "#comments #sections",
   "#comments #contents",
+  'ytd-engagement-panel-section-list-renderer[target-id="comments"]',
+  'ytd-engagement-panel-section-list-renderer:has(#comments)',
+  '#engagement-panel-comments',
+  "ytd-comments-entry-point-header-renderer",
+  "#comment-teaser",
+  "ytd-comments-header-renderer",
 ];
