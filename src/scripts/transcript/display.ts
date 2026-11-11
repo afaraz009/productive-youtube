@@ -1,6 +1,6 @@
 import { settings } from "../settings";
 import { formatTimestamp, decodeHtmlEntities, cleanTranscriptText } from "./utils";
-
+import { createSaveNoteButton, createChunkBookmark } from "./notes-ui";
 function getVideoTitle(): string {
   // Try multiple selectors to get the video title
   const titleSelectors = [
@@ -276,6 +276,10 @@ function setupHeaderButtons(
   content: HTMLElement
 ): { copyButton: HTMLElement; syncButton: HTMLElement } {
   const headerButtons = header.querySelector(".transcript-header-buttons") as HTMLElement;
+
+
+  const saveNoteButton = createSaveNoteButton(content, getVideoTitle);
+headerButtons.appendChild(saveNoteButton);
 
   const copyButton = createCopyButton(chunkedTranscript);
   const syncButton = createSyncButton(content);
@@ -805,7 +809,15 @@ function setupHeaderToggle(header: HTMLElement, content: HTMLElement): void {
 function renderTranscriptChunks(chunkedTranscript: any[], content: HTMLElement): void {
   chunkedTranscript.forEach((chunk) => {
     const chunkHeader = createChunkHeader(chunk);
-    content.appendChild(chunkHeader);
+    // content.appendChild(chunkHeader);
+    const row = document.createElement("div");
+row.style.cssText = "display:flex;align-items:center;gap:0.5rem;";
+const bookmark = createChunkBookmark(chunk, content, getVideoTitle);
+row.onmouseenter = () => (bookmark.style.opacity = "1");
+row.onmouseleave = () => (bookmark.style.opacity = "0");
+row.appendChild(chunkHeader);
+row.appendChild(bookmark);
+content.appendChild(row);
 
     const chunkParagraph = createChunkParagraph(chunk);
     content.appendChild(chunkParagraph);

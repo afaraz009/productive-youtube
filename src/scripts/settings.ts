@@ -49,6 +49,21 @@ If relevant, include brief sections on:
 Format all hyperlinks properly to ensure they are clickable and lead to the correct timestamp in the video.`,
     vocabulary: "Find all difficult words and create a table of English to Urdu and English to English meaning"
   }
+,
+
+
+ // Focus Lock
+focusLockEnabled: false,
+focusLockUntil: 0,
+focusLockDurationMinutes: 25, // Default duration
+focusLockFeatures: [
+  "removeShorts",
+  "removeShortsButton",
+  "removeHomepageVideos",
+  "removeWatchPageSuggestions"
+],
+focusLockValues: {},
+
 };
 
 // Current settings instance - exported as mutable object
@@ -61,7 +76,7 @@ export function loadSettings(callback?: () => void): void {
     // Load all settings with defaults
     keys.forEach((key) => {
       if (result[key] !== undefined) {
-        settings[key as keyof Settings] = result[key];
+        Object.assign(settings, { [key]: result[key] });
       }
     });
 

@@ -104,6 +104,34 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
       }
     }
 
+
+// Enforce Focus Lock in the content script
+const lockIsActive =
+  settings.focusLockEnabled &&
+  settings.focusLockUntil > Date.now();
+
+if (lockIsActive) {
+  const restoreSettings: Partial<Settings> = {};
+
+  settings.focusLockFeatures.forEach((key) => {
+    const expectedValue = settings.focusLockValues[key];
+
+    if (
+      expectedValue !== undefined &&
+      changes[key]?.newValue !== undefined &&
+      changes[key].newValue !== expectedValue
+    ) {
+      restoreSettings[key] = expectedValue;
+    }
+  });
+
+  if (Object.keys(restoreSettings).length > 0) {
+    updateSettings(restoreSettings);
+    chrome.storage.local.set(restoreSettings);
+  }
+}
+
+
     // If settings changed, apply them immediately
     if (needsUpdate) {
       applyAllRemovals();

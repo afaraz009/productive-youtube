@@ -7,6 +7,13 @@ export interface VideoInfo {
 
 export type AIService = 'chatgpt' | 'gemini' | 'claude' | 'grok';
 
+
+export type FocusFeature =
+  | "removeShorts"
+  | "removeShortsButton"
+  | "removeHomepageVideos"
+  | "removeWatchPageSuggestions";
+
 export interface AIPrompts {
   translate: string;
   summarize: string;
@@ -24,4 +31,13 @@ export interface Settings {
   // AI Settings
   aiService: AIService;
   aiPrompts: AIPrompts;
+
+
+  // Focus Lock
+  focusLockEnabled: boolean;
+  focusLockDurationMinutes: number; 
+  focusLockUntil: number;
+  focusLockFeatures: FocusFeature[];
+  focusLockValues: Partial<Record<FocusFeature, boolean>>;
+
 }

@@ -37,7 +37,7 @@ export function extractPlayerResponseFromScripts(videoId: string): any | null {
       }
     }
   }
-  return null;
+    return null;
 }
 
 /** Extract a complete JSON object from a string starting at the given index */
