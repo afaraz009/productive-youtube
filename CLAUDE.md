@@ -31,11 +31,19 @@ This is a Chrome browser extension that removes YouTube Shorts, homepage videos,
 │   │   │   ├── suggestions.ts     # Remove video suggestions
 │   │   │   └── shortsButton.ts    # Remove Shorts sidebar button
 │   │   ├── transcript/            # Transcript feature modules
-│   │      ├── index.ts           # Main transcript coordinator
-│   │      ├── api.ts             # YouTube API calls
-│   │      ├── parser.ts          # XML parsing
-│   │      ├── display.ts         # UI rendering
-│   │      └── utils.ts           # Helper functions
+│   │   │  ├── index.ts           # Main transcript coordinator
+│   │   │  ├── api.ts             # YouTube API calls
+│   │   │  ├── parser.ts          # XML parsing
+│   │   │  ├── display.ts         # UI rendering
+│   │   │  └── utils.ts           # Helper functions
+│   │   └── thumbnailSummary/      # Hover "TL;DR" button → thumbnail flips into a Gemini summary
+│   │      ├── index.ts           # Hover detection, card lifecycle, messaging (init/apply/closeAll)
+│   │      ├── card.ts            # Flip card (fixed layer on <body>, tracks the thumbnail)
+│   │      ├── dom.ts             # Tile/thumbnail/videoId/title lookup
+│   │      ├── transcript.ts      # Transcript text for any video id (reuses transcript/api.ts)
+│   │      └── styles.ts          # Injected stylesheet (pyt-ts-* classes, html[dark] theme)
+│   ├── background.ts              # Service worker: transcript fetch, AI tab automation, TL;DR messages
+│   ├── geminiSummary.ts           # Gemini generateContent call, prompt, summary cache (background only)
 │   ├── popup.html                 # Popup entry point
 │   └── popup.tsx                  # React entry point for popup
 ├── public/

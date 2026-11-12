@@ -49,6 +49,45 @@ export const HOMEPAGE_VIDEO_SELECTORS: string[] = [
   "ytd-item-section-renderer",
 ];
 
+// Thumbnail TL;DR summary: containers that represent one video "tile"
+export const VIDEO_TILE_SELECTORS: string[] = [
+  "yt-lockup-view-model",
+  "ytm-shorts-lockup-view-model",
+  "ytd-rich-item-renderer",
+  "ytd-video-renderer",
+  "ytd-compact-video-renderer",
+  "ytd-grid-video-renderer",
+  "ytd-playlist-video-renderer",
+  "ytd-playlist-panel-video-renderer",
+  "ytd-reel-item-renderer",
+  "ytd-movie-renderer",
+];
+
+// Thumbnail TL;DR summary: the clickable thumbnail link inside a tile
+export const THUMBNAIL_ANCHOR_SELECTORS: string[] = [
+  "a#thumbnail[href]",
+  "a.ytLockupViewModelContentImage[href]",
+  "a.yt-lockup-view-model__content-image[href]",
+  "a.yt-lockup-view-model-wiz__content-image[href]",
+  "a.shortsLockupViewModelHostEndpoint[href]",
+  "a.reel-item-endpoint[href]",
+];
+
+// Thumbnail TL;DR summary: title element inside a tile (first match wins)
+export const VIDEO_TILE_TITLE_SELECTORS: string[] = [
+  "#video-title",
+  "a#video-title-link",
+  ".ytLockupMetadataViewModelTitle",
+  ".yt-lockup-metadata-view-model__title",
+  ".yt-lockup-metadata-view-model-wiz__title",
+  "h3 a[title]",
+  "h3",
+];
+
+// Thumbnail TL;DR summary: never attach inside these
+export const THUMBNAIL_SUMMARY_EXCLUDE_SELECTOR =
+  "#movie_player, ytd-miniplayer, #transcript-container, .ytp-videowall-still";
+
 // Video suggestions that appear after video ends (the large grid overlay)
 export const VIDEO_END_SUGGESTIONS_SELECTORS: string[] = [
   ".ytp-suggestion-set",

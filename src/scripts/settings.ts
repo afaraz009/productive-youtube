@@ -7,6 +7,7 @@ const defaultSettings: Settings = {
   removeHomepageVideos: true,
   removeWatchPageSuggestions: true,
   showTranscript: false,
+  thumbnailSummary: true,
 
   // AI Settings
   aiService: 'chatgpt',

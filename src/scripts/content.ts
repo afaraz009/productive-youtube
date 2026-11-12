@@ -15,6 +15,13 @@ import { removeShortsButton, throttledRemoveShortsButton } from "./removers/shor
 // Import transcript functionality
 import { showVideoTranscript, cleanupTranscript, isWatchPage, isHomePage } from "./transcript";
 
+// Import thumbnail TL;DR feature
+import {
+  initThumbnailSummary,
+  applyThumbnailSummarySetting,
+  closeAllSummaryCards,
+} from "./thumbnailSummary";
+
 // Track last video ID to detect video changes during SPA navigation
 let lastVideoId: string | null = null;
 
@@ -24,6 +31,9 @@ function initializeFullExtension(): void {
   loadSettings(function () {
     // Apply all removals based on settings
     applyAllRemovals();
+
+    // Hover listeners for the thumbnail TL;DR (they check the setting on every hover)
+  initThumbnailSummary();
 
     // Create observer for dynamic content
     const observer = new MutationObserver((mutations) => {
@@ -52,11 +62,14 @@ function initializeFullExtension(): void {
   });
 }
 
+//-------------------------------------------------------------------------------------------------------
 // Apply all removal functions based on current page
+//Apply all removal functions means (concisely in 4 words): Remove/Hide all YouTube elements that are toggled off
 function applyAllRemovals(): void {
   // Always check these regardless of page
   removeShorts();
   removeShortsButton();
+  applyThumbnailSummarySetting();
 
   // Page-specific removals
   if (isWatchPage()) {
@@ -77,7 +90,7 @@ function applyAllRemovals(): void {
     removeHomepageVideos();
   }
 }
-
+//-------------------------------------------------------------------------------------------------------
 // Throttled version of applyAllRemovals
 function applyAllRemovalsThrottled(): void {
   throttledRemoveShorts();
@@ -91,14 +104,16 @@ function applyAllRemovalsThrottled(): void {
     throttledRemoveHomepageVideos();
   }
 }
-
+//-------------------------------------------------------------------------------------------------------
 // Listen for settings changes and apply them immediately
 chrome.storage.onChanged.addListener(function (changes, namespace) {
+  //the storage area that was changed, either "sync" or "local"
   if (namespace === "local") {
     let needsUpdate = false;
-
+    //here changes is an object where the keys are the changed setting names and the values are objects with oldValue and newValue properties
     for (let key in changes) {
       if (settings.hasOwnProperty(key)) {
+        //changes = { showTranscript: { oldValue: false, newValue: true } }
         updateSettings({ [key]: changes[key].newValue });
         needsUpdate = true;
       }
@@ -110,6 +125,7 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
     }
   }
 });
+//-------------------------------------------------------------------------------------------------------
 
 // Handle YouTube SPA navigation
 function handleYouTubeNavigation(): void {
@@ -141,11 +157,14 @@ if (document.readyState === "loading") {
 } else {
   initializeFullExtension();
 }
-
+//-------------------------------------------------------------------------------------------------------
 // Listen for YouTube's SPA navigation events
 // This fires when YouTube navigates between pages without a full reload
 document.addEventListener("yt-navigate-finish", () => {
   // Add a small delay to let YouTube finish its navigation
+  // Open TL;DR cards belong to the previous page's tiles
+  closeAllSummaryCards();
+
   setTimeout(() => {
     handleYouTubeNavigation();
 

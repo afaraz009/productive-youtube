@@ -2,18 +2,27 @@
 
 export function getVideoId(): string | null {
   try {
+    //if the URL has a query parameter "v", return its value 
+    // otherwise, try to extract the video ID from other sources like the global player response or canonical link
     const urlParams = new URLSearchParams(window.location.search);
+    //https://www.youtube.com/watch?v=7K3KdgDcdYc -> urlParams.get("v") = 7K3KdgDcdYc
     const v = urlParams.get("v");
     if (v) return v;
 
     // Try global player response (works on many YouTube pages)
     // @ts-ignore
+    // extracting & returning id from ytInitialPlayerResponse object
     const yipr = (window as any).ytInitialPlayerResponse;
     if (yipr && yipr.videoDetails && yipr.videoDetails.videoId) {
       return yipr.videoDetails.videoId;
     }
 
     // Try canonical link or meta tags
+    // A canonical link reads the preferred URL from HTML.
+    // <link
+    //   rel="canonical" <---- It finds the <link> element whose rel attribute is canonical
+    //   href="https://www.youtube.com/watch?v=7K3KdgDcdYc"
+    // />
     const canonical = document.querySelector(
       'link[rel="canonical"]'
     ) as HTMLLinkElement | null;

@@ -141,7 +141,8 @@ async function fetchAndDisplayTranscript(): Promise<boolean> {
         );
         throw new Error("No API key available");
       }
-
+      //-------------------------------------------------------------------------------------------------------
+      //player api will give us the caption tracks and other metadata we need to fetch the transcript
       playerApiResponse = await fetchPlayerApi(videoId, apiKey);
       console.log(
         "Productive YouTube: Fetched player response from ANDROID API successfully"
@@ -188,6 +189,7 @@ async function fetchAndDisplayTranscript(): Promise<boolean> {
     transcript.slice(0, 5).forEach((entry, i) => {
       console.log(`  [${i}] ${entry.start.toFixed(1)}s: "${entry.text}"`);
     });
+    //-------------------------------------------------------------------------------------------------------
     displayTranscript(transcript);
     return true; // Success!
   } catch (error) {

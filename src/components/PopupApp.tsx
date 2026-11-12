@@ -15,12 +15,23 @@ interface Settings {
   removeHomepageVideos: boolean;
   removeWatchPageSuggestions: boolean;
   showTranscript: boolean;
+  thumbnailSummary: boolean;
   huggingfaceApiKey?: string;
+
+  // Thumbnail TL;DR (read by background.ts, never by the content script)
+  geminiApiKey: string;
+  geminiModel: string;
 
   // AI Settings
   aiService: AIService;
   aiPrompts: AIPrompts;
 }
+
+const GEMINI_MODELS: { id: string; label: string }[] = [
+  { id: "gemini-3.5-flash-lite", label: "Gemini 3.5 Flash-Lite (fastest)" },
+  { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash" },
+  { id: "gemini-3.8-flash", label: "Gemini 3.8 Flash (best quality)" },
+];
 
 const ToggleSwitch: React.FC<{
   id: string;
@@ -57,7 +68,7 @@ const ToggleSwitch: React.FC<{
     </div>
   );
 };
-
+//-------------------------------------------------------------------------------------------------------
 const PopupApp: React.FC = () => {
   const defaultSettings: Settings = {
     removeShorts: true,
@@ -65,7 +76,10 @@ const PopupApp: React.FC = () => {
     removeHomepageVideos: true,
     removeWatchPageSuggestions: true,
     showTranscript: false,
+    thumbnailSummary: true,
     huggingfaceApiKey: "",
+    geminiApiKey: "",
+    geminiModel: "gemini-3.5-flash-lite",
 
     // AI Settings
     aiService: 'chatgpt',
@@ -112,13 +126,24 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
 
   const [settings, setSettings] = useState<Settings>(defaultSettings);
 
+
+  // result = settings retrieved from Chrome storage.
+  // defaultSettings = fallback settings defined by your application.
+  // loadedSettings = combination of both, where saved settings override defaults.
+
   // Load settings from Chrome storage
   useEffect(() => {
+    //chrome -> Chrome extension API, it will only be defined when the 'extension' is running
     if (typeof chrome !== "undefined" && chrome.storage) {
       const keys = Object.keys(defaultSettings);
+      //keys = ["removeShorts", "removeShortsButton", "showTranscript", .....]
+      //result = {removeShorts: true, removeShortsButton: true, showTranscript: false, ...}
+      //Chrome searches its local storage for these keys and returns their stored values.
       chrome.storage.local.get(keys, (result) => {
+        //initialize loaded settings with default settings
         const loadedSettings = { ...defaultSettings };
         keys.forEach((key) => {
+          //copy all the result values into loadedSettings except the undefined ones
           if (result[key] !== undefined) {
             (loadedSettings as any)[key] = result[key];
           }
@@ -127,16 +152,28 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
       });
     }
   }, []);
-
+//-------------------------------------------------------------------------------------------------------
   // Generic toggle handler
   const handleToggle = (key: keyof Settings, value: boolean) => {
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
-
+    //saves the current toggle state in Chrome's extension storage
     if (typeof chrome !== "undefined" && chrome.storage) {
       chrome.storage.local.set({ [key]: value });
     }
   };
+  //-------------------------------------------------------------------------------------------------------
+
+  // Generic string setting handler (Gemini key / model)
+  const handleTextSetting = (key: "geminiApiKey" | "geminiModel", value: string) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      chrome.storage.local.set({ [key]: value.trim() });
+    }
+  };
+
+  const [showApiKey, setShowApiKey] = useState(false);
 
   // AI Service handler
   const handleAIServiceChange = (value: AIService) => {
@@ -199,6 +236,7 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
           checked={settings.removeWatchPageSuggestions}
           onChange={(val) => handleToggle("removeWatchPageSuggestions", val)}
         />
+        //-------------------------------------------------------------------------------------------------------
         <ToggleSwitch
           id="transcript-toggle"
           label="Show Video Transcript"
@@ -206,6 +244,81 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
           checked={settings.showTranscript}
           onChange={(val) => handleToggle("showTranscript", val)}
         />
+        //-------------------------------------------------------------------------------------------------------
+        <ToggleSwitch
+          id="thumbnail-summary-toggle" 
+          label="Thumbnail TL;DR"
+          description="Hover a video and click TL;DR to flip its thumbnail into a summary"
+          checked={settings.thumbnailSummary}
+          onChange={(val) => handleToggle("thumbnailSummary", val)}
+        />
+
+        {settings.thumbnailSummary && (
+          <div className="mt-1 mb-2 p-3 space-y-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/50">
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label
+                  htmlFor="gemini-api-key"
+                  className="text-xs font-medium text-slate-700 dark:text-slate-300"
+                >
+                  Gemini API key
+                </label>
+                <a
+                  href="https://aistudio.google.com/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Get a free key
+                </a>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  id="gemini-api-key"
+                  type={showApiKey ? "text" : "password"}
+                  value={settings.geminiApiKey}
+                  onChange={(e) => handleTextSetting("geminiApiKey", e.target.value)}
+                  placeholder="Paste your key"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="flex-1 min-w-0 px-3 py-2 text-xs border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="px-2.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg"
+                >
+                  {showApiKey ? "Hide" : "Show"}
+                </button>
+              </div>
+              {!settings.geminiApiKey && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5">
+                  Summaries need a key. It stays in this browser and is only sent to Google.
+                </p>
+              )}
+            </div>
+            <div>
+              <label
+                htmlFor="gemini-model"
+                className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5"
+              >
+                Model
+              </label>
+              <select
+                id="gemini-model"
+                value={settings.geminiModel}
+                onChange={(e) => handleTextSetting("geminiModel", e.target.value)}
+                className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              >
+                {GEMINI_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* AI Settings Section */}

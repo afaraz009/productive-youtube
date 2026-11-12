@@ -24,7 +24,6 @@ export function removeShorts(): void {
     });
   });
 }
-
 // Function to restore Shorts when feature is disabled
 export function restoreShorts(): void {
   SHORTS_SELECTORS.forEach((selector) => {

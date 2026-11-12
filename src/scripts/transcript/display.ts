@@ -27,7 +27,7 @@ function getVideoTitle(): string {
 
   return 'Video Title Not Found';
 }
-
+//-------------------------------------------------------------------------------------------------------
 export function displayTranscript(transcript: { text: string; start: number }[]): void {
   console.log(
     "Productive YouTube: displayTranscript function called with",
@@ -199,6 +199,9 @@ export function displayTranscript(transcript: { text: string; start: number }[])
   setupVideoTimeTracking(content);
 }
 
+
+//-------------------------------------------------------------------------------------------------------
+// Create the transcript header element
 function createTranscriptHeader(): HTMLElement {
   const header = document.createElement("div");
   header.className = "transcript-header";
@@ -869,6 +872,9 @@ function createChunkParagraph(chunk: any): HTMLElement {
   `;
 
   // Create spans for each line in the chunk
+  //example of lineData's internal structure: { start: 12.34, duration: 3.21, text: "This is a line of transcript." }
+  //we have extracted lineData from chunk.lines, which is an array of such objects
+  //we have extracted chunk.lines from 
   chunk.lines.forEach((lineData: any, index: number) => {
     const span = document.createElement("span");
     span.className = "transcript-segment";
@@ -880,7 +886,7 @@ function createChunkParagraph(chunk: any): HTMLElement {
       transition: all 0.2s ease;
       cursor: pointer;
     `;
-
+    // Add click event to seek video to the start time of the line
     span.onclick = () => {
       const video = document.querySelector("video");
       if (video) {

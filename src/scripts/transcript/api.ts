@@ -13,6 +13,7 @@ export function extractPlayerResponseFromScripts(videoId: string): any | null {
       "var ytInitialPlayerResponse = ",
       "ytInitialPlayerResponse = ",
     ];
+    // marker is a string that indicates the start of the ytInitialPlayerResponse JSON object in the script content. The function looks for these markers to locate where the JSON data begins. Once a marker is found, it searches for the opening curly brace '{' that signifies the start of the JSON object. It then attempts to extract the complete JSON string and parse it into an object. If the parsed object contains a videoId that matches the expected videoId, it returns this object; otherwise, it continues searching through other script tags.
     for (const marker of markers) {
       const markerIndex = content.indexOf(marker);
       if (markerIndex === -1) continue;
@@ -73,7 +74,7 @@ function extractCompleteJson(content: string, startIndex: number): string | null
   }
   return null;
 }
-
+//purpose of this function is to retrieve the API key needed to access YouTube's transcript data. It first checks if the API key is already cached; if so, it returns that cached key. If not, it attempts to extract the API key from the DOM of the current page. If that fails, it fetches the video page and extracts the API key from there. The function returns a Promise that resolves to the API key or null if it cannot be found.
 export async function fetchVideoPage(videoId: string): Promise<string> {
   console.log(`Fetching video page for video ID: ${videoId}`);
   const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
@@ -84,6 +85,7 @@ export async function fetchVideoPage(videoId: string): Promise<string> {
   return response.text();
 }
 
+//purpose of this function is to extract the API key from the HTML content of a YouTube video page. It searches for a specific pattern in the HTML that indicates the presence of the API key. If found, it returns the API key; otherwise, it returns null. This function is used as a fallback method to obtain the API key when it cannot be extracted from the DOM directly.
 export function extractApiKey(html: string): string | null {
   const match = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/);
   if (match && match[1]) {
@@ -202,7 +204,7 @@ export function extractTranscriptUrl(playerApiResponse: any): string | null {
   if (!transcriptTrack) {
     transcriptTrack = captionTracks.find((track: any) => track.baseUrl);
   }
-
+  //logical issue!!
   // Priority 4: Last resort - use first track
   if (!transcriptTrack && captionTracks.length > 0) {
     transcriptTrack = captionTracks[0];

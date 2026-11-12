@@ -12,6 +12,8 @@ The extension uses `chrome.storage` to store the following on your device:
 
 - **User preferences** — which features are enabled (block Shorts, hide homepage videos, hide suggestions, etc.).
 - **Temporary clipboard payloads** — when you choose to send a transcript to an AI service (ChatGPT, Claude, Gemini, Grok), the transcript text is briefly written to `chrome.storage.local` so the helper script on the AI site can read it. This entry is removed immediately after it is consumed.
+- **Gemini API key** — if you use Thumbnail TL;DR, the Gemini API key you paste into the popup is stored in `chrome.storage.local` and is sent only to Google's Gemini API.
+- **Summary cache** — generated thumbnail summaries (up to 200, keyed by video ID) are cached locally so the same video isn't summarized twice.
 
 This data is stored locally in your browser. It is not transmitted to any server operated by the developer.
 
@@ -23,6 +25,7 @@ The extension makes network requests to the following third-party services, only
 |---|---|---|
 | Transcript fetch | `youtube.com` (YouTube's own player API) | The video ID of the YouTube page you are viewing |
 | Translation | `api.mymemory.translated.net` | The transcript text or selection you asked to translate |
+| Thumbnail TL;DR | `generativelanguage.googleapis.com` (Google Gemini API, with your own API key) | The title, channel name and transcript of the video whose TL;DR button you clicked |
 | Send to AI | `chatgpt.com`, `claude.ai`, `gemini.google.com`, `grok.com` | The transcript text, pasted into the AI service's normal input field |
 
 These requests happen only in response to a user action (loading a watch page with the transcript feature enabled, or clicking a translate / send-to-AI button). The extension does not send your data anywhere else.
@@ -58,6 +61,7 @@ If you do not use these features, no data is sent to these third parties.
 - **`tabs`** and **`scripting`** — to open an AI service in a new tab and paste the transcript into its input field when you click "Send to AI".
 - **Host permissions for `youtube.com`** — to apply the focus features (hide Shorts, suggestions, etc.) and fetch transcripts on the page you are watching.
 - **Host permissions for AI sites and the translation API** — only used by the optional translate / send-to-AI features described above.
+- **Host permission for `generativelanguage.googleapis.com`** — only used by the optional Thumbnail TL;DR feature to request a summary with your own Gemini API key.
 
 ## 6. Children's privacy
 
