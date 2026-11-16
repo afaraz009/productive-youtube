@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { FocusFeature } from "../scripts/types";
 type AIService = "chatgpt" | "gemini" | "claude" | "grok";
-import NotesSection from "./NotesSection";
 
 
 interface AIPrompts {
@@ -334,9 +333,9 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
             label="Remove Shorts Shelves"
             description="Hide all Shorts sections from YouTube"
             checked={settings.removeShorts}
-            onChange={(val) => handleToggle("removeShortsButton", val)}
+            onChange={(val) => handleToggle("removeShorts", val)}
             disabled={
-              focusLockActive && lockedFeatures.includes("removeShortsButton")
+              focusLockActive && lockedFeatures.includes("removeShorts")
             }
           />
 
@@ -632,8 +631,6 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
           </div>
         )}
       </div>
-
-      {/* <NotesSection /> */}
 
       <div className="text-xs text-slate-500 dark:text-slate-400 text-center mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
         Version 2.0.3 • Built for focus 😒

@@ -1,6 +1,6 @@
 import { settings } from "../settings";
 import { formatTimestamp, decodeHtmlEntities, cleanTranscriptText } from "./utils";
-import { createSaveNoteButton, createChunkBookmark } from "./notes-ui";
+
 function getVideoTitle(): string {
   // Try multiple selectors to get the video title
   const titleSelectors = [
@@ -41,6 +41,7 @@ export function displayTranscript(transcript: { text: string; start: number }[])
     return;
   }
 
+  // #transcript-fixed-wrapper is the wrapper that hold the transcript container and is placed in the #secondary sidebar
   // Place the transcript inside YouTube's #secondary sidebar, above the suggestions.
   // The suggestion remover hides individual suggestion elements but #secondary stays visible.
   let transcriptWrapper = document.getElementById("transcript-fixed-wrapper") as HTMLElement | null;
@@ -58,6 +59,7 @@ export function displayTranscript(transcript: { text: string; start: number }[])
 
     // Insert into #secondary or #secondary-inner so it sits above suggestions
     const secondaryInner = document.querySelector("#secondary-inner") || document.querySelector("#secondary");
+    // it means insert the transcriptWrapper as the first child of the secondaryInner, so it appears above suggestions
     if (secondaryInner) {
       secondaryInner.insertBefore(transcriptWrapper, secondaryInner.firstChild);
     } else {
@@ -90,9 +92,10 @@ export function displayTranscript(transcript: { text: string; start: number }[])
 
   // Group transcript entries into 25-second chunks with individual lines
   const CHUNK_SIZE = 25; // seconds
+  // we will store the final grouped transcript here where each chunk has a start time and an array of lines with text, start time, and duration
   const chunkedTranscript: {
-    start: number;
-    lines: { text: string; start: number; duration: number }[];
+    start: number; // this start means the start time of the chunk
+    lines: { text: string; start: number; duration: number }[];  // this start means the starting time of an individual line within the chunk, and duration is how long that line lasts
   }[] = [];
   let currentChunk: {
     start: number;
@@ -131,7 +134,8 @@ export function displayTranscript(transcript: { text: string; start: number }[])
         start: chunkStart,
         lines: [lineData],
       };
-    } else {
+    } 
+    else {
       // Add to current chunk
       currentChunk.lines.push(lineData);
     }
@@ -216,7 +220,7 @@ function createTranscriptHeader(): HTMLElement {
 
   const title = document.createElement("div");
   title.className = "transcript-title";
-  title.textContent = "📖 Video Transcript";
+  title.textContent = "Video Transcript";
   title.style.cssText = `
     font-size: 16px;
     line-height: 1.5em;
@@ -277,9 +281,6 @@ function setupHeaderButtons(
 ): { copyButton: HTMLElement; syncButton: HTMLElement } {
   const headerButtons = header.querySelector(".transcript-header-buttons") as HTMLElement;
 
-
-  const saveNoteButton = createSaveNoteButton(content, getVideoTitle);
-headerButtons.appendChild(saveNoteButton);
 
   const copyButton = createCopyButton(chunkedTranscript);
   const syncButton = createSyncButton(content);
@@ -444,7 +445,7 @@ function createSyncButton(content: HTMLElement): HTMLElement {
     const video = document.querySelector("video");
     if (video) {
       const currentTime = video.currentTime;
-      const activeSegment = content.querySelector(".transcript-segment.active") as HTMLElement;
+      const activeSegment = content.querySelector(".transcript-segment.active") as HTMLElement | null;
       if (activeSegment) {
         const segmentTop = activeSegment.getBoundingClientRect().top;
         const contentTop = content.getBoundingClientRect().top;
@@ -453,12 +454,11 @@ function createSyncButton(content: HTMLElement): HTMLElement {
         const scrollPosition = relativeTop - containerHeight / 2;
         content.scrollTo({ top: scrollPosition, behavior: "smooth" });
       } else {
-        const segments = content.querySelectorAll(".transcript-segment");
+        const segments = Array.from(content.querySelectorAll<HTMLElement>(".transcript-segment"));
         let closestSegment: HTMLElement | null = null;
         let minDiff = Infinity;
 
-        segments.forEach((segment) => {
-          const segmentEl = segment as HTMLElement;
+        segments.forEach((segmentEl) => {
           const start = parseFloat(segmentEl.dataset.start || "0");
           const diff = Math.abs(currentTime - start);
           if (diff < minDiff) {
@@ -467,8 +467,9 @@ function createSyncButton(content: HTMLElement): HTMLElement {
           }
         });
 
-        if (closestSegment) {
-          const segmentTop = closestSegment.getBoundingClientRect().top;
+        const segmentToScroll = closestSegment as HTMLElement | null;
+        if (segmentToScroll) {
+          const segmentTop = segmentToScroll.getBoundingClientRect().top;
           const contentTop = content.getBoundingClientRect().top;
           const relativeTop = segmentTop - contentTop + content.scrollTop;
           const containerHeight = content.clientHeight;
@@ -564,7 +565,7 @@ function createTranslateButton(chunkedTranscript: any[]): HTMLElement {
     // Send message to background script with AI service selection
     chrome.runtime.sendMessage(
       {
-        type: "OPEN_AI_SERVICE",
+        type: "",
         aiService: settings.aiService,
         content: completeText,
       },
@@ -809,15 +810,8 @@ function setupHeaderToggle(header: HTMLElement, content: HTMLElement): void {
 function renderTranscriptChunks(chunkedTranscript: any[], content: HTMLElement): void {
   chunkedTranscript.forEach((chunk) => {
     const chunkHeader = createChunkHeader(chunk);
-    // content.appendChild(chunkHeader);
-    const row = document.createElement("div");
-row.style.cssText = "display:flex;align-items:center;gap:0.5rem;";
-const bookmark = createChunkBookmark(chunk, content, getVideoTitle);
-row.onmouseenter = () => (bookmark.style.opacity = "1");
-row.onmouseleave = () => (bookmark.style.opacity = "0");
-row.appendChild(chunkHeader);
-row.appendChild(bookmark);
-content.appendChild(row);
+    content.appendChild(chunkHeader);
+   
 
     const chunkParagraph = createChunkParagraph(chunk);
     content.appendChild(chunkParagraph);
@@ -911,6 +905,7 @@ function createChunkParagraph(chunk: any): HTMLElement {
   return paragraphEl;
 }
 
+// Not used anywhere
 function createTranscriptLine(lineData: any): HTMLElement {
   const lineEl = document.createElement("div");
   lineEl.className = "transcript-line";

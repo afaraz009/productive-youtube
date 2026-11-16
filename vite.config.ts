@@ -1,63 +1,60 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Chrome injects these as classic scripts, so each must be one
-// self-contained file with no imports.
-const classicScripts: Record<string, string> = {
-  content_script: "src/scripts/content.ts",
-  chatgpt_automation: "src/scripts/chatgpt-automation.ts",
-  gemini_automation: "src/scripts/gemini-automation.ts",
-  claude_automation: "src/scripts/claude-automation.ts",
-  grok_automation: "src/scripts/grok-automation.ts",
-};
-
-export default defineConfig(({ mode }) => {
-  const define = { "process.env.NODE_ENV": '"production"' };
-
-  // `vite build --mode <name>` builds one classic script
-  if (classicScripts[mode]) {
-    return {
-      define,
-      build: {
-        outDir: "dist",
-        emptyOutDir: false,
-        copyPublicDir: false,
-        sourcemap: false,
-        minify: true,
-        lib: {
-          entry: classicScripts[mode],
-          formats: ["iife"],
-          name: `PY_${mode}`,
-          fileName: () => `${mode}.js`,
-        },
+export default defineConfig({
+  plugins: [react()],
+  base: "./",
+  build: {
+    outDir: "dist",
+    rollupOptions: {
+      input: {
+        popup: "src/popup.html",
+        content: "src/scripts/content.ts",
+        background: "src/background.ts",
+        chatgpt_automation: "src/scripts/chatgpt-automation.ts",
+        gemini_automation: "src/scripts/gemini-automation.ts",
+        claude_automation: "src/scripts/claude-automation.ts",
+        grok_automation: "src/scripts/grok-automation.ts",
       },
-    };
-  }
-
-  // Default build: popup + background
-  return {
-    plugins: [react()],
-    base: "./",
-    define,
-    build: {
-      outDir: "dist",
-      sourcemap: false,
-      minify: true,
-      rollupOptions: {
-        input: {
-          popup: "src/popup.html",
-          background: "src/background.ts",
+      output: {
+        entryFileNames: (chunkInfo) => {
+          if (chunkInfo.name === "content") {
+            return "content_script.js";
+          }
+          if (chunkInfo.name === "background") {
+            return "background.js";
+          }
+          if (chunkInfo.name === "chatgpt_automation") {
+            return "chatgpt_automation.js";
+          }
+          if (chunkInfo.name === "gemini_automation") {
+            return "gemini_automation.js";
+          }
+          if (chunkInfo.name === "claude_automation") {
+            return "claude_automation.js";
+          }
+          if (chunkInfo.name === "grok_automation") {
+            return "grok_automation.js";
+          }
+          return "[name].js";
         },
-        output: {
-          entryFileNames: (chunk) =>
-            chunk.name === "background" ? "background.js" : "[name].js",
-          chunkFileNames: "[name].js",
-          assetFileNames: (asset) =>
-            asset.name === "popup.html" || asset.name === "popup.css"
-              ? asset.name
-              : "[name].[ext]",
+        chunkFileNames: "[name].js",
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name === "popup.html") {
+            return "popup.html";
+          }
+          if (assetInfo.name === "popup.css") {
+            return "popup.css";
+          }
+          return "[name].[ext]";
         },
       },
     },
-  };
+    sourcemap: false,
+    minify: true,
+  },
+  define: {
+    "process.env.NODE_ENV": '"production"',
+  },
 });
+
