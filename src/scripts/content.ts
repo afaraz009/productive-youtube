@@ -11,7 +11,10 @@ import { removeShorts, throttledRemoveShorts } from "./removers/shorts";
 import { removeHomepageVideos, throttledRemoveHomepageVideos } from "./removers/homepage";
 import { removeVideoSuggestions, throttledRemoveVideoSuggestions } from "./removers/suggestions";
 import { removeShortsButton, throttledRemoveShortsButton } from "./removers/shortsButton";
-
+import {
+  removeComments,
+  throttledRemoveComments
+} from "./removers/comments";
 // Import transcript functionality
 import { showVideoTranscript, cleanupTranscript, isWatchPage, isHomePage } from "./transcript";
 
@@ -57,6 +60,7 @@ function applyAllRemovals(): void {
   // Always check these regardless of page
   removeShorts();
   removeShortsButton();
+  removeComments();
 
   // Page-specific removals
   if (isWatchPage()) {
@@ -82,7 +86,7 @@ function applyAllRemovals(): void {
 function applyAllRemovalsThrottled(): void {
   throttledRemoveShorts();
   throttledRemoveShortsButton();
-
+  throttledRemoveComments();
   if (isWatchPage()) {
     throttledRemoveVideoSuggestions();
     // Note: showVideoTranscript is handled by navigation listener, not here
@@ -133,6 +137,8 @@ function handleYouTubeNavigation(): void {
     lastVideoId = null;
     cleanupTranscript(); // Remove transcript when navigating away from watch page
   }
+
+  removeComments();
 }
 
 // Initialize when DOM is ready

@@ -20,6 +20,7 @@ export interface Settings {
   removeHomepageVideos: boolean;
   removeWatchPageSuggestions: boolean;
   showTranscript: boolean;
+  removeComments: boolean;
 
   // AI Settings
   aiService: AIService;

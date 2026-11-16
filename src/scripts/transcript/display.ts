@@ -27,7 +27,7 @@ function getVideoTitle(): string {
 
   return 'Video Title Not Found';
 }
-
+// the transcript parameter is an array of objects with text and start properties which is the timestamp in seconds. The function will display the transcript in a fixed container on the right side of the YouTube watch page, with options to copy, sync, translate, summarize, and create a vocabulary table from the transcript.
 export function displayTranscript(transcript: { text: string; start: number }[]): void {
   console.log(
     "Productive YouTube: displayTranscript function called with",
@@ -101,15 +101,17 @@ export function displayTranscript(transcript: { text: string; start: number }[])
 
   transcript.forEach((line, index) => {
     // Decode HTML entities and clean the text
+    
     let decodedText = decodeHtmlEntities(line.text);
     decodedText = cleanTranscriptText(decodedText);
 
     // Skip if text is empty after cleaning
     if (!decodedText) return;
-
+    // this chunkSize logic ensures that each chunk starts at a multiple of CHUNK_SIZE seconds, and groups lines accordingly. Each line's duration is calculated based on the start time of the next line, or a default of 2 seconds for the last line. This allows for accurate timing when displaying the transcript alongside the video.
     const chunkStart = Math.floor(line.start / CHUNK_SIZE) * CHUNK_SIZE; // Round down to nearest chunk
 
     // Calculate duration for this line
+    // we calculate the duration for each line by looking at the start time of the next line. If it's the last line, we can assume a default duration of 2 seconds. 
     const nextStart =
       index < transcript.length - 1
         ? transcript[index + 1].start
@@ -121,12 +123,14 @@ export function displayTranscript(transcript: { text: string; start: number }[])
       start: line.start,
       duration: lineDuration,
     };
-
+    // first condition is when there is no currentChunk object  
     if (!currentChunk || currentChunk.start !== chunkStart) {
       // Start a new chunk
       if (currentChunk) {
         chunkedTranscript.push(currentChunk);
       }
+      //uper if wala condition false hogya cuz hamare paas currentChunk null hai, to phr hum currentChunk obj bana dete hain
+
       currentChunk = {
         start: chunkStart,
         lines: [lineData],
@@ -295,6 +299,7 @@ function setupHeaderButtons(
 function createCopyButton(chunkedTranscript: any[]): HTMLElement {
   const copyButton = document.createElement("button");
   copyButton.className = "transcript-copy-button";
+  //when the user hovers over the copy button, a tooltip will appear with the text "Copy transcript to clipboard"
   copyButton.title = "Copy transcript to clipboard";
 
   const copyIconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -342,6 +347,7 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
   };
 
   copyButton.onclick = (e) => {
+    //this is to prevent the trnscript from  collapsing because the header has an onclick event that toggles the content display. By stopping propagation, we ensure that clicking the copy button does not trigger the header's click event because the event bubbles to the parent header
     e.stopPropagation();
 
     // Get video title
@@ -385,7 +391,8 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
   return copyButton;
 }
 
-function createSyncButton(content: HTMLElement): HTMLElement {
+// This function creates a sync button that scrolls the transcript to the current timestamp of the video when clicked. It also highlights the active transcript segment based on the video's current time.
+function createSyncButton(content: HTMLElement): HTMLElement { //contains the rendered transcript
   const syncButton = document.createElement("button");
   syncButton.className = "transcript-sync-button";
   syncButton.title = "Scroll to current timestamp";
@@ -437,9 +444,13 @@ function createSyncButton(content: HTMLElement): HTMLElement {
 
   syncButton.onclick = (e) => {
     e.stopPropagation();
+
+    //video element
     const video = document.querySelector("video");
     if (video) {
+      //built in method to get the current time of the video in seconds
       const currentTime = video.currentTime;
+      //this will find the active transcript segment based on the current time of the video and scroll it into view. If no active segment is found, it will find the closest segment to the current time and scroll to that instead.
       const activeSegment = content.querySelector(".transcript-segment.active") as HTMLElement;
       if (activeSegment) {
         const segmentTop = activeSegment.getBoundingClientRect().top;
@@ -449,16 +460,23 @@ function createSyncButton(content: HTMLElement): HTMLElement {
         const scrollPosition = relativeTop - containerHeight / 2;
         content.scrollTo({ top: scrollPosition, behavior: "smooth" });
       } else {
+        //this is to find the closest timestamp to the current time of the video and scroll to that segment if no active segment is found.
         const segments = content.querySelectorAll(".transcript-segment");
         let closestSegment: HTMLElement | null = null;
+        // our first calculated difference will be smaller than infinity
         let minDiff = Infinity;
 
         segments.forEach((segment) => {
+          // we want to treat segment as an heml element so we can access its dataset properties like dataset.start
           const segmentEl = segment as HTMLElement;
+          //because the starting timestamp will be a string
           const start = parseFloat(segmentEl.dataset.start || "0");
+          // the result will help us find the timestamp with the closest difference 
           const diff = Math.abs(currentTime - start);
           if (diff < minDiff) {
+            // store timestamps, and whn you find the timestamp that is smaller than the prev timestamp then update the minDiff
             minDiff = diff;
+            // to update which segment is the closest. segment 1, 2, 3, or 4 etc 
             closestSegment = segmentEl;
           }
         });
@@ -558,6 +576,7 @@ function createTranslateButton(chunkedTranscript: any[]): HTMLElement {
     }
 
     // Send message to background script with AI service selection
+    // acts as middleman between chrome extention and external services 
     chrome.runtime.sendMessage(
       {
         type: "OPEN_AI_SERVICE",
