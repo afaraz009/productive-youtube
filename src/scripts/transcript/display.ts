@@ -18,25 +18,86 @@ const SAVED_NOTES_KEY = "savedNotes";
 const PENDING_NOTE_PREFIX = "pendingNoteNavigation_";
 
 // Interface for representing a selected range in the transcript
-interface NoteSelection {
+type NoteSelection = {
   startTime: number;
   endTime: number;
+  startSegmentStart: number;
+  endSegmentStart: number;
+  startOffset: number;
+  endOffset: number;
   preview: string;
-}
+};
+
+// function getSelectedTranscriptRange(): NoteSelection | null {
+//   // what text is currenty selected in the transcript container
+//   const selection = window.getSelection();
+//   const container = document.getElementById("transcript-container");
+
+//   // if nothing selected just return null
+//   if (!selection || selection.isCollapsed || !container) {
+//     return null;
+//   }
+
+//   // A Range object describes where a selection starts and ends in the DOM.
+
+//   // get the range of the selection
+//   const range = selection.getRangeAt(0);
+
+//   // Only allow selections completely inside our transcript.
+//   if (
+//     !container.contains(range.startContainer) ||
+//     !container.contains(range.endContainer)
+//   ) {
+//     return null;
+//   }
+
+//   const segments = Array.from(
+//     container.querySelectorAll<HTMLElement>(".transcript-segment"),
+//   );
+
+//   const selectedSegments = segments.filter((segment) => {
+//     try {
+//       return range.intersectsNode(segment);
+//     } catch {
+//       return false;
+//     }
+//   });
+
+//   if (selectedSegments.length === 0) {
+//     return null;
+//   }
+
+//   const firstSegment = selectedSegments[0];
+//   const lastSegment = selectedSegments[selectedSegments.length - 1];
+
+//   // dataset reads HTML attributes as strings so we need to convert them to numbers and check if they are valid numbers
+//   const startTime = Number(firstSegment.dataset.start);
+//   const lastStart = Number(lastSegment.dataset.start);
+//   const lastDuration = Number(lastSegment.dataset.duration || 0);
+
+//   if (
+//     !Number.isFinite(startTime) ||
+//     !Number.isFinite(lastStart) ||
+//     !Number.isFinite(lastDuration)
+//   ) {
+//     return null;
+//   }
+
+//   return {
+//     startTime,
+//     endTime: lastStart + lastDuration,
+//     preview: selection.toString().trim().slice(0, 100),
+//   };
+// }
 
 function getSelectedTranscriptRange(): NoteSelection | null {
-  // what text is currenty selected in the transcript container
   const selection = window.getSelection();
   const container = document.getElementById("transcript-container");
 
-  // if nothing selected just return null
   if (!selection || selection.isCollapsed || !container) {
     return null;
   }
 
-  // A Range object describes where a selection starts and ends in the DOM.
-
-  // get the range of the selection
   const range = selection.getRangeAt(0);
 
   // Only allow selections completely inside our transcript.
@@ -66,15 +127,65 @@ function getSelectedTranscriptRange(): NoteSelection | null {
   const firstSegment = selectedSegments[0];
   const lastSegment = selectedSegments[selectedSegments.length - 1];
 
-  // dataset reads HTML attributes as strings so we need to convert them to numbers and check if they are valid numbers
+  // Find which transcript segment contains the actual start/end
+  // of the user's selection.
+  const startSegment =
+    range.startContainer instanceof Element
+      ? range.startContainer.closest<HTMLElement>(".transcript-segment")
+      : range.startContainer.parentElement?.closest<HTMLElement>(
+          ".transcript-segment",
+        );
+
+  const endSegment =
+    range.endContainer instanceof Element
+      ? range.endContainer.closest<HTMLElement>(".transcript-segment")
+      : range.endContainer.parentElement?.closest<HTMLElement>(
+          ".transcript-segment",
+        );
+
+  if (!startSegment || !endSegment) {
+    return null;
+  }
+
+  // Calculate the character offset relative to a segment's own text.
+  function getOffsetWithinSegment(
+    segment: HTMLElement,
+    node: Node,
+    nodeOffset: number,
+  ): number {
+    const localRange = document.createRange();
+
+    localRange.selectNodeContents(segment);
+    localRange.setEnd(node, nodeOffset);
+
+    return localRange.toString().length;
+  }
+
+  const startOffset = getOffsetWithinSegment(
+    startSegment,
+    range.startContainer,
+    range.startOffset,
+  );
+
+  const endOffset = getOffsetWithinSegment(
+    endSegment,
+    range.endContainer,
+    range.endOffset,
+  );
+
   const startTime = Number(firstSegment.dataset.start);
   const lastStart = Number(lastSegment.dataset.start);
   const lastDuration = Number(lastSegment.dataset.duration || 0);
 
+  const startSegmentStart = Number(startSegment.dataset.start);
+  const endSegmentStart = Number(endSegment.dataset.start);
+
   if (
     !Number.isFinite(startTime) ||
     !Number.isFinite(lastStart) ||
-    !Number.isFinite(lastDuration)
+    !Number.isFinite(lastDuration) ||
+    !Number.isFinite(startSegmentStart) ||
+    !Number.isFinite(endSegmentStart)
   ) {
     return null;
   }
@@ -82,6 +193,10 @@ function getSelectedTranscriptRange(): NoteSelection | null {
   return {
     startTime,
     endTime: lastStart + lastDuration,
+    startSegmentStart,
+    endSegmentStart,
+    startOffset,
+    endOffset,
     preview: selection.toString().trim().slice(0, 100),
   };
 }
@@ -158,16 +273,31 @@ function setupTranscriptNoteSaving(): void {
       return;
     }
 
+    // const note = {
+    //   id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    //   videoId,
+    //   videoTitle: getVideoTitle(),
+    //   startTime: selectedRange.startTime,
+    //   endTime: selectedRange.endTime,
+    //   preview: selectedRange.preview,
+    //   createdAt: Date.now(),
+    // };
+
     const note = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       videoId,
       videoTitle: getVideoTitle(),
       startTime: selectedRange.startTime,
       endTime: selectedRange.endTime,
+
+      startSegmentStart: selectedRange.startSegmentStart,
+      endSegmentStart: selectedRange.endSegmentStart,
+      startOffset: selectedRange.startOffset,
+      endOffset: selectedRange.endOffset,
+
       preview: selectedRange.preview,
       createdAt: Date.now(),
     };
-
     // spread the existing notes and add the new note to the array, then save it back to storage
     chrome.storage.local.get([SAVED_NOTES_KEY], (result) => {
       const notes = (result[SAVED_NOTES_KEY] || []) as (typeof note)[];
@@ -262,7 +392,7 @@ function highlightSavedNote(startTime: number, endTime: number): void {
     const duration = Number(segment.dataset.duration || 0);
     const end = start + duration;
 
-    //  the segment starts before the note ends and the segment ends after the note starts. 
+    //  the segment starts before the note ends and the segment ends after the note starts.
     // Highlight every transcript segment overlapping the saved range.
     if (start < endTime && end > startTime) {
       // since its overlapping so we assign this a new class to highlight it
