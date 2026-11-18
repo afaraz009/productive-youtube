@@ -41,3 +41,13 @@ export interface Settings {
   focusLockValues: Partial<Record<FocusFeature, boolean>>;
 
 }
+
+export interface SavedNote {
+  id: string;
+  videoId: string;
+  videoTitle: string;
+  startTime: number;
+  endTime: number;
+  preview: string;
+  createdAt: number;
+}

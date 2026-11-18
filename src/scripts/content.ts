@@ -14,7 +14,7 @@ import { removeShortsButton, throttledRemoveShortsButton } from "./removers/shor
 
 // Import transcript functionality
 import { showVideoTranscript, cleanupTranscript, isWatchPage, isHomePage } from "./transcript";
-
+import { clearActiveSavedNoteRange } from "./transcript/display";
 // Track last video ID to detect video changes during SPA navigation
 let lastVideoId: string | null = null;
 
@@ -149,6 +149,7 @@ function handleYouTubeNavigation(): void {
     // Only show transcript if video changed or first load
     if (currentVideoId && currentVideoId !== lastVideoId) {
       lastVideoId = currentVideoId;
+      clearActiveSavedNoteRange();
 
       // Give YouTube more time to render the page on SPA navigation
       setTimeout(() => {
@@ -159,6 +160,7 @@ function handleYouTubeNavigation(): void {
     removeVideoSuggestions();
   } else {
     lastVideoId = null;
+    clearActiveSavedNoteRange();
     cleanupTranscript(); // Remove transcript when navigating away from watch page
   }
 }

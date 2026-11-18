@@ -36,8 +36,131 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       });
     return true; // Keep message channel open for async response
   }
-});
 
+  // This msg is sent from popup to background when user clicks on a saved note in the popup
+    if (request.type === "OPEN_SAVED_NOTE") {
+    handleSavedNoteOpen(request.videoId, request.startTime, request.endTime)
+      .then(sendResponse)
+      .catch((error) => {
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
+
+  // this is sent from the content script to the background when the new tab is opened and we want to get the saved note range from storage
+    if (request.type === "GET_SAVED_NOTE_RANGE") {
+    handleGetSavedNoteRange(_sender)
+      .then(sendResponse)
+      .catch((error) => {
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
+
+  if (request.type === "CHECK_PENDING_SAVED_NOTE") {
+  checkPendingSavedNote(_sender)
+    .then(sendResponse)
+    .catch((error) => {
+      sendResponse({ success: false, error: error.message });
+    });
+
+  return true;
+}
+});
+async function checkPendingSavedNote(
+  sender: chrome.runtime.MessageSender
+) {
+  const tabId = sender.tab?.id;
+
+  if (tabId === undefined) {
+    return { success: false, isPending: false };
+  }
+
+  const storageKey = `pendingNoteNavigation_${tabId}`;
+
+  const result = await chrome.storage.local.get(storageKey);
+
+  return {
+    success: true,
+    isPending: !!result[storageKey],
+  };
+}
+
+// this function is called when the content script sends a message to the background to get the saved note range for the newly opened tab
+async function handleGetSavedNoteRange(
+  sender: chrome.runtime.MessageSender
+) {
+  const tabId = sender.tab?.id;
+
+  if (tabId === undefined) {
+    return { success: false, error: "Could not identify requesting tab" };
+  }
+
+  const storageKey = `pendingNoteNavigation_${tabId}`;
+
+  const result = await chrome.storage.local.get(storageKey);
+
+  const savedRange = result[storageKey];
+
+  if (!savedRange) {
+    return { success: true, data: null };
+  }
+
+  // Remove the temporary range after it has been retrieved
+  await chrome.storage.local.remove(storageKey);
+
+  return { success: true, data: savedRange };
+}
+async function handleSavedNoteOpen(
+  videoId: string,
+  startTime: number,
+  endTime: number
+) {
+  // 1. Create a blank tab first
+  const tab = await chrome.tabs.create({
+    url: "about:blank",
+    active: true,
+  });
+
+  if (tab.id === undefined) {
+    throw new Error("Failed to create saved note tab");
+  }
+
+  const tabId = tab.id;
+
+  // 2. Create a storage key using the tab's ID
+  const storageKey = `pendingNoteNavigation_${tabId}`;
+
+  // 3. Save the note's timestamp range before navigating to YouTube
+  await new Promise<void>((resolve, reject) => {
+    chrome.storage.local.set(
+      {
+        [storageKey]: {
+          startTime,
+          endTime,
+        },
+      },
+      () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+
+        resolve();
+      }
+    );
+  });
+
+  // 4. Navigate the same tab to YouTube
+  const url =
+    `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}` +
+    `&t=${Math.floor(startTime)}s`;
+
+    // we are telling chrome to update the tab with the new url,
+  await chrome.tabs.update(tabId, { url });
+
+  return { success: true, tabId };
+}
 async function handleTranslation(text: string) {
   try {
     // Using MyMemory Translation API (completely free, no key required)
@@ -185,7 +308,10 @@ async function handleAIServiceOpen(aiService: AIService, content: string) {
       },
     });
 
-    // Open AI service in a new tab
+    // Open AI service in a new tab 
+    // chrome.tabs.create() returns a Promise. 
+    // When Chrome creates the new tab, that Promise resolves 
+    // with a Tab object containing information about the tab, including its numeric id.
     const tab = await chrome.tabs.create({
       url: config.url,
       active: true,
@@ -196,13 +322,15 @@ async function handleAIServiceOpen(aiService: AIService, content: string) {
     }
 
     // Set up listener for when the tab finishes loading
-    const tabId = tab.id;
+    const tabId = tab.id; // stores the tab ID for the newly created tab 
+    // so we can check if the updated tab is the one we just opened
     const listener = (
       updatedTabId: number,
       changeInfo: chrome.tabs.TabChangeInfo
     ) => {
       if (updatedTabId === tabId && changeInfo.status === "complete") {
-        // Inject the automation script
+        // Inject the automation script 
+        // it is injected into the newly opened tab to automate the AI service 
         chrome.scripting
           .executeScript({
             target: { tabId: tabId },

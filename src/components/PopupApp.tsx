@@ -6,11 +6,11 @@ import {
   RotateCcw,
   Sparkles,
   Lock,
-  
 } from "lucide-react";
 import { FocusFeature } from "../scripts/types";
 type AIService = "chatgpt" | "gemini" | "claude" | "grok";
 
+import { SavedNote } from "../scripts/types";
 
 interface AIPrompts {
   translate: string;
@@ -89,6 +89,13 @@ const ToggleSwitch: React.FC<{
   );
 };
 
+function formatNoteTimestamp(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+
+  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
 const PopupApp: React.FC = () => {
   const defaultSettings: Settings = {
     removeShorts: true,
@@ -149,6 +156,9 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
   };
 
   const [settings, setSettings] = useState<Settings>(defaultSettings);
+  // State for saved notes and whether to show the "My Notes" screen
+  const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
+  const [showMyNotes, setShowMyNotes] = useState(false);
 
   const focusFeatures = [
     { key: "removeShorts", label: "Remove Shorts Shelves" },
@@ -236,6 +246,107 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const loadNotes = () => {
+      chrome.storage.local.get(["savedNotes"], (result) => {
+        setSavedNotes(result.savedNotes || []);
+      });
+    };
+
+    loadNotes();
+
+    const handleStorageChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      namespace: string,
+    ) => {
+      if (namespace === "local" && changes.savedNotes) {
+        setSavedNotes(changes.savedNotes.newValue || []);
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
+  }, []);
+
+  // const openSavedNote = (note: SavedNote) => {
+  //   // We use a unique token to identify the note navigation request. This token will be used to retrieve the note's start and end times when the new tab is opened. 
+  //   const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  //   // the storage key is constructed using the token, and the note's start and end times are stored in chrome.storage.local under this key. When the new tab is opened, the content script can retrieve these times using the token from the URL.
+  //   const storageKey = `pendingNoteNavigation_${token}`;
+
+  //   chrome.storage.local.set(
+  //     {
+  //       [storageKey]: {
+  //         startTime: note.startTime,
+  //         endTime: note.endTime,
+  //       },
+  //     },
+  //     () => {
+  //       if (chrome.runtime.lastError) {
+  //         console.error(
+  //           "Could not prepare saved note navigation:",
+  //           chrome.runtime.lastError.message,
+  //         );
+  //         return;
+  //       }
+
+  //       const url =
+  //         `https://www.youtube.com/watch?v=${encodeURIComponent(note.videoId)}` +
+  //         `&t=${Math.floor(note.startTime)}s` +
+  //         `&pyNoteToken=${encodeURIComponent(token)}`;
+
+  //       chrome.tabs.create({ url });
+  //     },
+  //   );
+  // };
+  const openSavedNote = (note: SavedNote) => {
+
+    // sends a runtime message to the background script to open the saved note in a new tab. The message includes the video ID, start time, and end time of the note. The background script will handle opening the YouTube video at the specified timestamp and ensuring that the note is displayed correctly.
+  chrome.runtime.sendMessage(
+    {
+      type: "OPEN_SAVED_NOTE",
+      videoId: note.videoId,
+      startTime: note.startTime,
+      endTime: note.endTime,
+    },
+    (response) => {
+      if (chrome.runtime.lastError) {
+        console.error(
+          "Could not open saved note:",
+          chrome.runtime.lastError.message
+        );
+        return;
+      }
+
+      if (!response?.success) {
+        console.error(
+          "Could not open saved note:",
+          response?.error
+        );
+      }
+    }
+  );
+};
+  
+  const deleteSavedNote = (noteId: string) => {
+    const updatedNotes = savedNotes.filter((note) => note.id !== noteId);
+
+    chrome.storage.local.set({ savedNotes: updatedNotes }, () => {
+      if (chrome.runtime.lastError) {
+        console.error(
+          "Could not delete saved note:",
+          chrome.runtime.lastError.message,
+        );
+        return;
+      }
+
+      setSavedNotes(updatedNotes);
+    });
+  };
+
   const handleFocusFeatureChange = (key: FocusFeature, checked: boolean) => {
     const features = checked
       ? [...settings.focusLockFeatures, key]
@@ -285,15 +396,30 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
   };
 
   const [showAISettings, setShowAISettings] = useState(false);
+  // this groupednotes is an object where each key is a videoId and the value is an array of notes for that video
+  const groupedNotes = savedNotes.reduce<Record<string, SavedNote[]>>(
+    (groups, note) => {
+      // if the video id doesn't exist in the groups object,
+      //  initialize it with an empty array
+      if (!groups[note.videoId]) {
+        groups[note.videoId] = [];
+      }
+
+      // now we have an array for this video id, so we can push the note into it
+
+      groups[note.videoId].push(note);
+      return groups;
+    },
+    {},
+  );
 
   return (
-    <div className="w-96 max-h-[600px] pb-5 overflow-y-auto font-sans text-sm bg-[#faf9f5] dark:bg-slate-950">
+    <div className="relative w-96 max-h-[600px] pb-5 overflow-y-auto font-sans text-sm bg-[#faf9f5] dark:bg-slate-950">
       <div className="sticky top-0 z-10 bg-[#086972] dark:bg-[#07545b] px-4 py-4 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center border border-white/10">
             <span className="text-white text-sm font-bold">YT</span>
           </div>
-
           <div className="flex-1">
             <h1 className="text-[15px] font-bold text-white tracking-tight">
               Productive YouTube
@@ -302,7 +428,7 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
               Your mindful YouTube experience
             </p>
           </div>
-
+          \
           <span className="text-[9px] font-semibold tracking-wider uppercase text-teal-50 bg-white/15 px-2.5 py-1 rounded-full">
             FOCUS
           </span>
@@ -323,6 +449,93 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
             Customize your YouTube environment.
           </p>
         </div>
+
+        {/* My Notes button */}
+        <div className="px-4 pt-3">
+          <button
+            onClick={() => setShowMyNotes(true)}
+            className="w-full rounded-lg border border-[#086972] px-4 py-2 text-sm font-medium text-[#086972]"
+          >
+            My Notes ({savedNotes.length})
+          </button>
+        </div>
+
+        {/* My Notes screen */}
+        {showMyNotes && (
+          <div className="absolute inset-0 z-50 overflow-y-auto bg-[#faf9f5] p-4">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">My Notes</h2>
+
+              <button
+                onClick={() => setShowMyNotes(false)}
+                className="text-sm font-medium text-[#086972]"
+              >
+                Back
+              </button>
+            </div>
+
+            {savedNotes.length === 0 ? (
+              <p className="py-8 text-center text-sm text-gray-500">
+                No saved notes yet. Select text in a video transcript to save a
+                note.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {/* 
+              example of groupedNotes:
+              const groupedNotes = {
+                  videoA: [
+                    { id: 1, text: "JavaScript introduction" },
+                    { id: 2, text: "JavaScript variables" }
+                  ],
+                  videoB: [
+                    { id: 3, text: "React components" }
+                  ]
+                };
+              map works on array but here groupedNotes is an object with videoId as keys and array of notes as values,
+              and so we use Object.entries() to convert it to an array of key-value pairs so now each element is a [videoId, notes] pair with notes being the array of notes for that video having that videoId , videotitle, starting and ending times, preview and createdAt */}
+                {Object.entries(groupedNotes).map(([videoId, notes]) => (
+                  <div key={videoId} className="border-b border-gray-200 pb-3">
+                    <h3 className="mb-2 text-sm font-semibold text-gray-900">
+                      {notes[0].videoTitle}
+                    </h3>
+
+                    <div className="space-y-2">
+                      {notes.map((note) => (
+                        <div
+                          key={note.id}
+                          className="flex items-start gap-2 rounded-lg border border-gray-200 bg-white p-3"
+                        >
+                          <button
+                            onClick={() => openSavedNote(note)}
+                            className="min-w-0 flex-1 text-left"
+                          >
+                            <p className="text-xs font-medium text-[#086972]">
+                              {formatNoteTimestamp(note.startTime)} –{" "}
+                              {formatNoteTimestamp(note.endTime)}
+                            </p>
+
+                            <p className="mt-1 break-words text-sm text-gray-700">
+                              {note.preview}
+                            </p>
+                          </button>
+
+                          <button
+                            onClick={() => deleteSavedNote(note.id)}
+                            title="Delete note"
+                            className="shrink-0 px-2 py-1 text-xs text-red-600"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div>
           {/* Keep all five existing ToggleSwitch components here,
