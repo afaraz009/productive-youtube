@@ -3,9 +3,8 @@ import { SHORTS_SELECTORS } from "../selectors";
 
 // Function to find and remove the Shorts section
 export function removeShorts(): void {
-  // Check if feature is enabled
-  if (!settings.removeShorts) {
-    // If disabled, restore previously hidden elements
+  // Check if feature is enabled or disabled?
+  if (!settings.removeShorts) { // If disabled, restore previously hidden elements
     restoreShorts();
     return;
   }
@@ -24,6 +23,7 @@ export function removeShorts(): void {
     });
   });
 }
+
 // Function to restore Shorts when feature is disabled
 export function restoreShorts(): void {
   SHORTS_SELECTORS.forEach((selector) => {

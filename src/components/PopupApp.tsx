@@ -16,6 +16,7 @@ interface Settings {
   removeWatchPageSuggestions: boolean;
   showTranscript: boolean;
   thumbnailSummary: boolean;
+  showArticlePosts: boolean;
   huggingfaceApiKey?: string;
 
   // Thumbnail TL;DR (read by background.ts, never by the content script)
@@ -77,6 +78,7 @@ const PopupApp: React.FC = () => {
     removeWatchPageSuggestions: true,
     showTranscript: false,
     thumbnailSummary: true,
+    showArticlePosts: true,
     huggingfaceApiKey: "",
     geminiApiKey: "",
     geminiModel: "gemini-3.5-flash-lite",
@@ -133,17 +135,17 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
 
   // Load settings from Chrome storage
   useEffect(() => {
-    //chrome -> Chrome extension API, it will only be defined when the 'extension' is running
+    // is this an 'extension' that's running?
     if (typeof chrome !== "undefined" && chrome.storage) {
       const keys = Object.keys(defaultSettings);
-      //keys = ["removeShorts", "removeShortsButton", "showTranscript", .....]
-      //result = {removeShorts: true, removeShortsButton: true, showTranscript: false, ...}
+      //keys -> keys of the defaultSettings object
       //Chrome searches its local storage for these keys and returns their stored values.
       chrome.storage.local.get(keys, (result) => {
         //initialize loaded settings with default settings
         const loadedSettings = { ...defaultSettings };
-        keys.forEach((key) => {
-          //copy all the result values into loadedSettings except the undefined ones
+        keys.forEach((key) => {   
+          // replace all the loadedSettings (currently default) with the result values except the undefined ones 
+          // keep them as they are (default)
           if (result[key] !== undefined) {
             (loadedSettings as any)[key] = result[key];
           }
@@ -251,6 +253,13 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
           description="Hover a video and click TL;DR to flip its thumbnail into a summary"
           checked={settings.thumbnailSummary}
           onChange={(val) => handleToggle("thumbnailSummary", val)}
+        />
+        <ToggleSwitch
+          id="article-toggle" 
+          label="Article Posts"
+          description="Show article posts on the homepage"
+          checked={settings.showArticlePosts}
+          onChange={(val) => handleToggle("showArticlePosts", val)}
         />
 
         {settings.thumbnailSummary && (

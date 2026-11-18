@@ -8,7 +8,7 @@ const defaultSettings: Settings = {
   removeWatchPageSuggestions: true,
   showTranscript: false,
   thumbnailSummary: true,
-
+  showArticlePosts: false,
   // AI Settings
   aiService: 'chatgpt',
   aiPrompts: {
@@ -52,26 +52,36 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
   }
 };
 
+
+// First argument (keys): Which values do you want to retrieve?
+// Second argument (callback): What should happen after those values are retrieved?
+
 // Current settings instance - exported as mutable object
 export const settings: Settings = { ...defaultSettings };
 
-// Load settings from storage
-export function loadSettings(callback?: () => void): void {
+//Runs Once, when the YouTube page loads
+export function loadSettings(callback?: () => void): void { // ?-> callback is optional, it will be called only if provided
   const keys = Object.keys(settings);
   chrome.storage.local.get(keys, function (result) {
     // Load all settings with defaults
+    //result -> object containing the changed setting values
     keys.forEach((key) => {
       if (result[key] !== undefined) {
         settings[key as keyof Settings] = result[key];
       }
     });
-
     if (callback) callback();
   });
 }
 
-// Update settings (for internal use)
+//Runs every time you change a setting in the popup
+// Update settings that are just changed using handleToggle function in popupApp.tsx
 export function updateSettings(newSettings: Partial<Settings>): void {
-  // Mutate the existing object instead of reassigning
+  // Copies source properties onto target, mutates target, and returns it.
   Object.assign(settings, newSettings);
+
+  // it is same as:
+  // for (const key in newSettings) {
+  //   settings[key] = newSettings[key];
+  // }
 }

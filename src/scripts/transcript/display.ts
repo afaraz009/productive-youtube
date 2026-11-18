@@ -1,5 +1,6 @@
 import { settings } from "../settings";
 import { formatTimestamp, decodeHtmlEntities, cleanTranscriptText } from "./utils";
+import { setupSelectionHighlight, retrieveSelectionHighlight } from "./highlight";
 
 function getVideoTitle(): string {
   // Try multiple selectors to get the video title
@@ -192,7 +193,10 @@ export function displayTranscript(transcript: { text: string; start: number }[])
 
   setupHeaderToggle(header, content);
 
-  renderTranscriptChunks(chunkedTranscript, content);
+  renderTranscriptChunks(chunkedTranscript, content); // the text spans are created here
+  //why this position? -> It needs content, which only exists from this point
+  setupSelectionHighlight(content)
+  retrieveSelectionHighlight(content)
 
   applyDarkModeStyles(isDarkMode(), container, header, content);
   setupDarkModeObserver(container, header, content);

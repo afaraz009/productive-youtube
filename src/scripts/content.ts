@@ -1,5 +1,4 @@
-// Main content script - orchestrates all features
-
+// Main content script - orchestrates/executes all features
 // Import types
 import { Settings } from "./types";
 
@@ -22,6 +21,7 @@ import {
   closeAllSummaryCards,
 } from "./thumbnailSummary";
 
+import { initArticlePosts } from "./articlePosts";
 // Track last video ID to detect video changes during SPA navigation
 let lastVideoId: string | null = null;
 
@@ -33,12 +33,19 @@ function initializeFullExtension(): void {
     applyAllRemovals();
 
     // Hover listeners for the thumbnail TL;DR (they check the setting on every hover)
-  initThumbnailSummary();
+    initThumbnailSummary();
+
+    // Initialize article posts feature
+    initArticlePosts();
 
     // Create observer for dynamic content
+    //MutationObserver -> watch for changes being made to the DOM tree
     const observer = new MutationObserver((mutations) => {
+      // Recheck newly added DOM elements (video tiles, thumbnails, etc.) against the user's removal settings (Shorts, suggestions, etc.).
       let shouldCheck = false;
+      // console.log("mutations: ",  mutations)
       mutations.forEach((mutation) => {
+        //mutation represents the newly added video card/tile and addedNodes are the elements of that card. 
         if (mutation.addedNodes.length > 0) {
           for (let node of mutation.addedNodes) {
             if (node.nodeType === Node.ELEMENT_NODE) {
@@ -64,7 +71,7 @@ function initializeFullExtension(): void {
 
 //-------------------------------------------------------------------------------------------------------
 // Apply all removal functions based on current page
-//Apply all removal functions means (concisely in 4 words): Remove/Hide all YouTube elements that are toggled off
+// Reapply all last saved settings
 function applyAllRemovals(): void {
   // Always check these regardless of page
   removeShorts();
@@ -88,10 +95,13 @@ function applyAllRemovals(): void {
     removeVideoSuggestions(); // Always call - function handles restore internally
   } else if (isHomePage()) {
     removeHomepageVideos();
+    // applyArticlePostsSetting();
+
   }
 }
 //-------------------------------------------------------------------------------------------------------
 // Throttled version of applyAllRemovals
+// Why Throttle ? -> Reapplies the settings "only for the changed elements", reducing cost
 function applyAllRemovalsThrottled(): void {
   throttledRemoveShorts();
   throttledRemoveShortsButton();
@@ -107,7 +117,7 @@ function applyAllRemovalsThrottled(): void {
 //-------------------------------------------------------------------------------------------------------
 // Listen for settings changes and apply them immediately
 chrome.storage.onChanged.addListener(function (changes, namespace) {
-  //the storage area that was changed, either "sync" or "local"
+  //namespace -> the storage area that was changed, either "sync" or "local"
   if (namespace === "local") {
     let needsUpdate = false;
     //here changes is an object where the keys are the changed setting names and the values are objects with oldValue and newValue properties
@@ -151,20 +161,42 @@ function handleYouTubeNavigation(): void {
   }
 }
 
+
+console.log("Step 1 - check state");
+
 // Initialize when DOM is ready
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initializeFullExtension);
 } else {
   initializeFullExtension();
 }
+
 //-------------------------------------------------------------------------------------------------------
+if (document.readyState === "loading") { //the page hasn't loaded yet so start the extension when the page loads
+  document.addEventListener("DOMContentLoaded",initializeFullExtension);
+
+  console.log("Step 2 - waiting for DOMContentLoaded");
+
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("Step 3 - DOMContentLoaded, initializing extension");
+  });
+
+
+} else { 
+  console.log("Step 4 - DOM already loaded, initializing extension");
+  
+  //already loaded, start the extension immediately
+  initializeFullExtension();
+}
+//-------------------------------------------------------------------------------------------------------
+
 // Listen for YouTube's SPA navigation events
 // This fires when YouTube navigates between pages without a full reload
 document.addEventListener("yt-navigate-finish", () => {
   // Add a small delay to let YouTube finish its navigation
   // Open TL;DR cards belong to the previous page's tiles
   closeAllSummaryCards();
-
+  // Waiting for the YouTube navigation to finish
   setTimeout(() => {
     handleYouTubeNavigation();
 
