@@ -3,26 +3,45 @@
 // Import types
 import { Settings } from "./types";
 
+import { initAuthState } from "./authState";
+
 // Import settings management
 import { settings, loadSettings, updateSettings } from "./settings";
 
 // Import removers
 import { removeShorts, throttledRemoveShorts } from "./removers/shorts";
-import { removeHomepageVideos, throttledRemoveHomepageVideos } from "./removers/homepage";
-import { removeVideoSuggestions, throttledRemoveVideoSuggestions } from "./removers/suggestions";
-import { removeShortsButton, throttledRemoveShortsButton } from "./removers/shortsButton";
 import {
-  removeComments,
-  throttledRemoveComments
-} from "./removers/comments";
+  removeHomepageVideos,
+  throttledRemoveHomepageVideos,
+} from "./removers/homepage";
+import {
+  removeVideoSuggestions,
+  throttledRemoveVideoSuggestions,
+} from "./removers/suggestions";
+import {
+  removeShortsButton,
+  throttledRemoveShortsButton,
+} from "./removers/shortsButton";
+import { removeComments, throttledRemoveComments } from "./removers/comments";
 // Import transcript functionality
-import { showVideoTranscript, cleanupTranscript, isWatchPage, isHomePage } from "./transcript";
+import {
+  showVideoTranscript,
+  cleanupTranscript,
+  isWatchPage,
+  isHomePage,
+} from "./transcript";
 
 // Track last video ID to detect video changes during SPA navigation
 let lastVideoId: string | null = null;
 
 // Extended initialization to handle all features
 function initializeFullExtension(): void {
+  initAuthState((user) => {
+    console.log(
+      "[Productive YouTube] auth state:",
+      user ? user.email : "signed out",
+    );
+  });
   // Load settings and then initialize
   loadSettings(function () {
     // Apply all removals based on settings

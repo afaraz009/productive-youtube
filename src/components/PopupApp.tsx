@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
 
+import { useAuth } from "../hooks/useAuth";
+import AccountBar from "./AccountBar";
+import { openAuthPage } from "../auth/openAuthPage";
+
 type AIService = 'chatgpt' | 'gemini' | 'claude' | 'grok';
 
 interface AIPrompts {
@@ -122,6 +126,9 @@ const hasChromeStorage = () =>
 const PopupApp: React.FC = () => {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [showAISettings, setShowAISettings] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+  //auth ....
+  const auth = useAuth();
 
   // Load settings from Chrome storage
   useEffect(() => {
@@ -244,7 +251,6 @@ const PopupApp: React.FC = () => {
           checked={settings.showTranscript}
           onChange={(val) => handleToggle("showTranscript", val)}
         />
-
         <ToggleSwitch
           id="comments-toggle"
           label="Hide Video Comments"
@@ -252,8 +258,78 @@ const PopupApp: React.FC = () => {
           checked={settings.removeComments}
           onChange={(val) => handleToggle("removeComments", val)}
         />
+      </div>
 
+      {/* Account */}
+      <div className="border-t border-slate-200 dark:border-slate-800">
+        <button
+          onClick={() => setShowAccount(!showAccount)}
+          aria-expanded={showAccount}
+          className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+        >
+          <span className="min-w-0">
+            <span className="text-sm font-medium text-slate-900 dark:text-slate-100 block">
+              Account
+            </span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 block truncate">
+              {auth.loading
+                ? "Checking…"
+                : auth.user
+                ? auth.user.email
+                : "Not signed in"}
+            </span>
+          </span>
+          <svg
+            className={`w-5 h-5 flex-shrink-0 text-slate-400 transition-transform duration-200 ${
+              showAccount ? "rotate-180" : ""
+            }`}
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M5 8l5 5 5-5" />
+          </svg>
+        </button>
 
+        {showAccount && (
+          <div className="px-6 pt-1 pb-5">
+            {auth.loading ? (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Loading…
+              </p>
+            ) : auth.user ? (
+              <AccountBar
+                user={auth.user}
+                busy={auth.busy}
+                onSignOut={() => void auth.signOut()}
+              />
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Log in or create an account to save your notes.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => void openAuthPage("login")}
+                    className="flex-1 px-3 py-2.5 text-sm font-medium rounded-md bg-[#802C62] text-white hover:bg-[#6d2653] transition-colors"
+                  >
+                    Log in
+                  </button>
+                  <button
+                  //signup ...
+                    onClick={() => void openAuthPage("signup")}
+                    className="flex-1 px-3 py-2.5 text-sm font-medium rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    Sign up
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* AI Settings */}

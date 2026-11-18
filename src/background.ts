@@ -1,6 +1,21 @@
 // Background service worker for handling API calls (bypasses CORS)
 
+import { handleAuthMessage, registerAuthBroadcast } from "./auth/authService";
+import type { AuthRequest } from "./auth/types";
+//immediately initializes when background.ts loads and registers a listener with supabase
+registerAuthBroadcast();
+// this listener waits for messages from other parts of my extention
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+
+  //auth..
+  if (typeof request.type === "string" && request.type.startsWith("AUTH_")) {
+  if (_sender.id !== chrome.runtime.id) return false; // own extension only
+
+  //helps decide which authentication operation to execute
+  //the response goes to chrome.runtime.sendMessage in authApi.ts
+  handleAuthMessage(request as AuthRequest).then(sendResponse);
+  return true; // keep the channel open for the async response
+}
   if (request.type === "FETCH_TRANSCRIPT") {
     handleTranscriptFetch(request.url)
       .then(sendResponse)

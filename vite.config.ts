@@ -8,7 +8,9 @@ export default defineConfig({
     outDir: "dist",
     rollupOptions: {
       input: {
+
         popup: "src/popup.html",
+        auth: "src/auth.html",
         content: "src/scripts/content.ts",
         background: "src/background.ts",
         chatgpt_automation: "src/scripts/chatgpt-automation.ts",
