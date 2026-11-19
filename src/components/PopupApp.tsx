@@ -311,37 +311,6 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
     };
   }, [auth.loading, auth.user?.id]);
 
-  // const openSavedNote = (note: SavedNote) => {
-  //   // We use a unique token to identify the note navigation request. This token will be used to retrieve the note's start and end times when the new tab is opened.
-  //   const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  //   // the storage key is constructed using the token, and the note's start and end times are stored in chrome.storage.local under this key. When the new tab is opened, the content script can retrieve these times using the token from the URL.
-  //   const storageKey = `pendingNoteNavigation_${token}`;
-
-  //   chrome.storage.local.set(
-  //     {
-  //       [storageKey]: {
-  //         startTime: note.startTime,
-  //         endTime: note.endTime,
-  //       },
-  //     },
-  //     () => {
-  //       if (chrome.runtime.lastError) {
-  //         console.error(
-  //           "Could not prepare saved note navigation:",
-  //           chrome.runtime.lastError.message,
-  //         );
-  //         return;
-  //       }
-
-  //       const url =
-  //         `https://www.youtube.com/watch?v=${encodeURIComponent(note.videoId)}` +
-  //         `&t=${Math.floor(note.startTime)}s` +
-  //         `&pyNoteToken=${encodeURIComponent(token)}`;
-
-  //       chrome.tabs.create({ url });
-  //     },
-  //   );
-  // };
   const openSavedNote = (note: SavedNote) => {
     chrome.runtime.sendMessage(
       {

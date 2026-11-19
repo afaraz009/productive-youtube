@@ -93,7 +93,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true;
   }
 
-  if (request.type === "CHECK_PENDING_SAVED_NOTE") {
+  if (request.type === "HECK_PENDING_SAVED_NOTE") {
     checkPendingSavedNote(_sender)
       .then(sendResponse)
       .catch((error) => {

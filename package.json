@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && npm run build:content && npm run copy-files",
-"build:content": "vite build --mode content_script && vite build --mode chatgpt_automation && vite build --mode gemini_automation && vite build --mode claude_automation && vite build --mode grok_automation",
+    "build:content": "vite build --mode content_script && vite build --mode chatgpt_automation && vite build --mode gemini_automation && vite build --mode claude_automation && vite build --mode grok_automation",
     "preview": "vite preview",
     "watch": "vite build --watch",
     "clean": "rimraf dist",
@@ -14,7 +14,7 @@
     "package": "npm run build && zip -r extension.zip dist/*"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.119.0",
+    "@supabase/supabase-js": "^2.119.1",
     "lucide": "^0.556.0",
     "lucide-react": "^0.552.0",
     "react": "^18.2.0",

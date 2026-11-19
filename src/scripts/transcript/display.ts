@@ -33,68 +33,6 @@ type NoteSelection = {
   preview: string;
 };
 
-// function getSelectedTranscriptRange(): NoteSelection | null {
-//   // what text is currenty selected in the transcript container
-//   const selection = window.getSelection();
-//   const container = document.getElementById("transcript-container");
-
-//   // if nothing selected just return null
-//   if (!selection || selection.isCollapsed || !container) {
-//     return null;
-//   }
-
-//   // A Range object describes where a selection starts and ends in the DOM.
-
-//   // get the range of the selection
-//   const range = selection.getRangeAt(0);
-
-//   // Only allow selections completely inside our transcript.
-//   if (
-//     !container.contains(range.startContainer) ||
-//     !container.contains(range.endContainer)
-//   ) {
-//     return null;
-//   }
-
-//   const segments = Array.from(
-//     container.querySelectorAll<HTMLElement>(".transcript-segment"),
-//   );
-
-//   const selectedSegments = segments.filter((segment) => {
-//     try {
-//       return range.intersectsNode(segment);
-//     } catch {
-//       return false;
-//     }
-//   });
-
-//   if (selectedSegments.length === 0) {
-//     return null;
-//   }
-
-//   const firstSegment = selectedSegments[0];
-//   const lastSegment = selectedSegments[selectedSegments.length - 1];
-
-//   // dataset reads HTML attributes as strings so we need to convert them to numbers and check if they are valid numbers
-//   const startTime = Number(firstSegment.dataset.start);
-//   const lastStart = Number(lastSegment.dataset.start);
-//   const lastDuration = Number(lastSegment.dataset.duration || 0);
-
-//   if (
-//     !Number.isFinite(startTime) ||
-//     !Number.isFinite(lastStart) ||
-//     !Number.isFinite(lastDuration)
-//   ) {
-//     return null;
-//   }
-
-//   return {
-//     startTime,
-//     endTime: lastStart + lastDuration,
-//     preview: selection.toString().trim().slice(0, 100),
-//   };
-// }
-
 function getSelectedTranscriptRange(): NoteSelection | null {
   // The returned object is the browser selection object and it has information about
   // where selection starts and ends in DOM, the actual text selected, and whether the selection is collapsed (no text selected) or not.
@@ -280,6 +218,7 @@ function setupTranscriptNoteSaving(): void {
           const error =
             chrome.runtime.lastError?.message ??
             "Could not reach the extension background.";
+
           console.error("Productive YouTube: Could not save note:", error);
           alert("Could not save your note. Please try again.");
           return;
@@ -294,7 +233,28 @@ function setupTranscriptNoteSaving(): void {
           return;
         }
 
+        // Remember the newly saved note on this page.
+        activeSavedNoteRange = {
+          startTime: note.startTime,
+          endTime: note.endTime,
+          startSegmentStart: note.startSegmentStart,
+          endSegmentStart: note.endSegmentStart,
+          startOffset: note.startOffset,
+          endOffset: note.endOffset,
+        };
+
+        // Make sure the CSS highlight style exists.
+        addSavedNoteStyles();
+
+        // Highlight the newly saved note immediately.
+        highlightSavedNote(
+          activeSavedNoteRange.startTime,
+          activeSavedNoteRange.endTime,
+          activeSavedNoteRange,
+        );
+
         button.textContent = "Saved";
+
         setTimeout(() => {
           button.style.display = "none";
           button.textContent = "Save note";
@@ -334,61 +294,6 @@ function addSavedNoteStyles(): void {
   document.head.appendChild(style);
 }
 
-// ISSUE THAT NEEDS TO BE FIXED
-//  Highlight function is not working at the moment the storage key is being truncated in the url when we open the new tab, so we need to find a way to pass the full key to the new tab and retrieve the note from storage. maybe remove the token from url and pass the data like we are doing for the translate transcript feature where we are making a new tab and listening for tab changes and once we are in that tab we can see what note is associated to this one and then we can highlight it in the transcript.
-// function highlightSavedNote(startTime: number, endTime: number): void {
-//   console.log("highlightSavedNote called:", startTime, endTime);
-//   // get the transcript container so we can find the segments to highlight
-//   const container = document.getElementById("transcript-container");
-
-//   if (!container) return;
-
-//   // get all the transcript segments and highlight those that overlap with the saved note range
-//   const segments = container.querySelectorAll<HTMLElement>(
-//     ".transcript-segment",
-//   );
-
-//   console.log("Transcript container:", container);
-//   console.log("Transcript segments found:", segments.length);
-//   // we need to keep track of the first highlighted segment
-//   //  so we can scroll it into view after highlighting
-//   let firstHighlighted: HTMLElement | undefined;
-
-//   segments.forEach((segment) => {
-//     const start = Number(segment.dataset.start);
-//     const duration = Number(segment.dataset.duration || 0);
-//     const end = start + duration;
-
-//     //  the segment starts before the note ends and the segment ends after the note starts.
-//     // Highlight every transcript segment overlapping the saved range.
-//     if (start < endTime && end > startTime) {
-//       // since its overlapping so we assign this a new class to highlight it
-//       segment.classList.add("saved-note-segment");
-
-//       // the segment overlaps the selected range so we check if we have already
-//       //  set firstHighlighted, if not we set it to this segment
-//       if (!firstHighlighted) {
-//         firstHighlighted = segment;
-//       }
-
-//       console.log({
-//         segmentStart: start,
-//         segmentEnd: end,
-//         overlaps: start < endTime && end > startTime,
-//       });
-//     } else {
-//       segment.classList.remove("saved-note-segment");
-//     }
-//   });
-
-//   if (firstHighlighted !== undefined) {
-//     firstHighlighted.scrollIntoView({
-//       behavior: "smooth",
-//       block: "center",
-//     });
-//   }
-// }
-
 function highlightSavedNote(
   startTime: number,
   endTime: number,
@@ -427,7 +332,7 @@ function highlightSavedNote(
     );
 
     if (startSegment && endSegment) {
-      // first child here is the text node that was actually selected 
+      // first child here is the text node that was actually selected
       const startTextNode = startSegment.firstChild;
       const endTextNode = endSegment.firstChild;
 
@@ -457,7 +362,7 @@ function highlightSavedNote(
           const HighlightClass = (window as any).Highlight;
 
           if (css.highlights && HighlightClass) {
-          // make a new highlight object with the range
+            // make a new highlight object with the range
             const highlight = new HighlightClass(range);
 
             // save it in the browser's highlight registry with a name so its registered now and it can find the css for it and apply the styles to it
@@ -662,7 +567,7 @@ export function displayTranscript(
 
   transcript.forEach((line, index) => {
     // Decode HTML entities and clean the text
-    
+
     let decodedText = decodeHtmlEntities(line.text);
     decodedText = cleanTranscriptText(decodedText);
 
@@ -672,7 +577,7 @@ export function displayTranscript(
     const chunkStart = Math.floor(line.start / CHUNK_SIZE) * CHUNK_SIZE; // Round down to nearest chunk
 
     // Calculate duration for this line
-    // we calculate the duration for each line by looking at the start time of the next line. If it's the last line, we can assume a default duration of 2 seconds. 
+    // we calculate the duration for each line by looking at the start time of the next line. If it's the last line, we can assume a default duration of 2 seconds.
     const nextStart =
       index < transcript.length - 1
         ? transcript[index + 1].start
@@ -684,7 +589,7 @@ export function displayTranscript(
       start: line.start,
       duration: lineDuration,
     };
-    // first condition is when there is no currentChunk object  
+    // first condition is when there is no currentChunk object
     if (!currentChunk || currentChunk.start !== chunkStart) {
       // Start a new chunk
       if (currentChunk) {
@@ -971,7 +876,8 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
 }
 
 // This function creates a sync button that scrolls the transcript to the current timestamp of the video when clicked. It also highlights the active transcript segment based on the video's current time.
-function createSyncButton(content: HTMLElement): HTMLElement { //contains the rendered transcript
+function createSyncButton(content: HTMLElement): HTMLElement {
+  //contains the rendered transcript
   const syncButton = document.createElement("button");
   syncButton.className = "transcript-sync-button";
   syncButton.title = "Scroll to current timestamp";
@@ -1056,12 +962,12 @@ function createSyncButton(content: HTMLElement): HTMLElement { //contains the re
           // we want to treat segment as an heml element so we can access its dataset properties like dataset.start
           //because the starting timestamp will be a string
           const start = parseFloat(segmentEl.dataset.start || "0");
-          // the result will help us find the timestamp with the closest difference 
+          // the result will help us find the timestamp with the closest difference
           const diff = Math.abs(currentTime - start);
           if (diff < minDiff) {
             // store timestamps, and whn you find the timestamp that is smaller than the prev timestamp then update the minDiff
             minDiff = diff;
-            // to update which segment is the closest. segment 1, 2, 3, or 4 etc 
+            // to update which segment is the closest. segment 1, 2, 3, or 4 etc
             closestSegment = segmentEl;
           }
         });
@@ -1165,7 +1071,7 @@ function createTranslateButton(chunkedTranscript: any[]): HTMLElement {
     }
 
     // Send message to background script with AI service selection
-    // acts as middleman between chrome extention and external services 
+    // acts as middleman between chrome extention and external services
     chrome.runtime.sendMessage(
       {
         type: "",
