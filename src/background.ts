@@ -39,7 +39,15 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
   // This msg is sent from popup to background when user clicks on a saved note in the popup
     if (request.type === "OPEN_SAVED_NOTE") {
-    handleSavedNoteOpen(request.videoId, request.startTime, request.endTime)
+    handleSavedNoteOpen(
+  request.videoId,
+  request.startTime,
+  request.endTime,
+  request.startSegmentStart,
+  request.endSegmentStart,
+  request.startOffset,
+  request.endOffset,
+)
       .then(sendResponse)
       .catch((error) => {
         sendResponse({ success: false, error: error.message });
@@ -114,9 +122,12 @@ async function handleGetSavedNoteRange(
 async function handleSavedNoteOpen(
   videoId: string,
   startTime: number,
-  endTime: number
+  endTime: number,
+  startSegmentStart: number,
+  endSegmentStart: number,
+  startOffset: number,
+  endOffset: number,
 ) {
-  // 1. Create a blank tab first
   const tab = await chrome.tabs.create({
     url: "about:blank",
     active: true,
@@ -127,17 +138,18 @@ async function handleSavedNoteOpen(
   }
 
   const tabId = tab.id;
-
-  // 2. Create a storage key using the tab's ID
   const storageKey = `pendingNoteNavigation_${tabId}`;
 
-  // 3. Save the note's timestamp range before navigating to YouTube
   await new Promise<void>((resolve, reject) => {
     chrome.storage.local.set(
       {
         [storageKey]: {
           startTime,
           endTime,
+          startSegmentStart,
+          endSegmentStart,
+          startOffset,
+          endOffset,
         },
       },
       () => {
@@ -145,18 +157,15 @@ async function handleSavedNoteOpen(
           reject(new Error(chrome.runtime.lastError.message));
           return;
         }
-
         resolve();
-      }
+      },
     );
   });
 
-  // 4. Navigate the same tab to YouTube
   const url =
     `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}` +
     `&t=${Math.floor(startTime)}s`;
 
-    // we are telling chrome to update the tab with the new url,
   await chrome.tabs.update(tabId, { url });
 
   return { success: true, tabId };

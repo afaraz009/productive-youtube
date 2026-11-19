@@ -302,32 +302,33 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
   //     },
   //   );
   // };
-  const openSavedNote = (note: SavedNote) => {
-
-    // sends a runtime message to the background script to open the saved note in a new tab. The message includes the video ID, start time, and end time of the note. The background script will handle opening the YouTube video at the specified timestamp and ensuring that the note is displayed correctly.
+ const openSavedNote = (note: SavedNote) => {
   chrome.runtime.sendMessage(
     {
       type: "OPEN_SAVED_NOTE",
       videoId: note.videoId,
       startTime: note.startTime,
       endTime: note.endTime,
+
+      // Information needed for exact-text highlighting
+      startSegmentStart: note.startSegmentStart,
+      endSegmentStart: note.endSegmentStart,
+      startOffset: note.startOffset,
+      endOffset: note.endOffset,
     },
     (response) => {
       if (chrome.runtime.lastError) {
         console.error(
           "Could not open saved note:",
-          chrome.runtime.lastError.message
+          chrome.runtime.lastError.message,
         );
         return;
       }
 
       if (!response?.success) {
-        console.error(
-          "Could not open saved note:",
-          response?.error
-        );
+        console.error("Could not open saved note:", response?.error);
       }
-    }
+    },
   );
 };
   
