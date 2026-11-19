@@ -741,6 +741,77 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
 
       <div className="px-4 pt-4 border-t border-[#e8eeeb] dark:border-slate-700">
         <button
+          onClick={() => setShowAccount(!showAccount)}
+          aria-expanded={showAccount}
+          className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+        >
+          <span className="min-w-0">
+            <span className="text-sm font-medium text-slate-900 dark:text-slate-100 block">
+              Account
+            </span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 block truncate">
+              {auth.loading
+                ? "Checking…"
+                : auth.user
+                  ? auth.user.email
+                  : "Not signed in"}
+            </span>
+          </span>
+          <svg
+            className={`w-5 h-5 flex-shrink-0 text-slate-400 transition-transform duration-200 ${
+              showAccount ? "rotate-180" : ""
+            }`}
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 8l5 5 5-5" />
+          </svg>
+        </button>
+
+        {showAccount && (
+          <div className="px-6 pt-1 pb-5">
+            {auth.loading ? (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Loading…
+              </p>
+            ) : auth.user ? (
+              <AccountBar
+                user={auth.user}
+                busy={auth.busy}
+                onSignOut={() => void auth.signOut()}
+              />
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Log in or create an account to save your notes.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => void openAuthPage("login")}
+                    className="flex-1 px-3 py-2.5 text-sm font-medium rounded-md bg-[#086972] text-white hover:bg-[#07545b] transition-colors"
+                  >
+                    Log in
+                  </button>
+                  <button
+                    onClick={() => void openAuthPage("signup")}
+                    className="flex-1 px-3 py-2.5 text-sm font-medium rounded-md border border-[#cbded8] dark:border-slate-600 text-[#086972] dark:text-teal-300 hover:bg-[#edf5f1] dark:hover:bg-teal-900/20 transition-colors"
+                  >
+                    Sign up
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="px-4 pt-4 border-t border-[#e8eeeb] dark:border-slate-700">
+        <button
           onClick={() => setShowAISettings(!showAISettings)}
           aria-expanded={showAISettings}
           className="w-full flex items-center justify-between px-6 py-4.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors group"
