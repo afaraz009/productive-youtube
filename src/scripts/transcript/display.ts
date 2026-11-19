@@ -4,22 +4,23 @@ import {
   decodeHtmlEntities,
   cleanTranscriptText,
 } from "./utils";
-import type { NotesResponse } from "../../notes/types";
-import type { SavedNote } from "../types";
 
-let activeSavedNoteRange: {
+type ActiveSavedNoteRange = {
   startTime: number;
   endTime: number;
   startSegmentStart: number;
   endSegmentStart: number;
   startOffset: number;
   endOffset: number;
-} | null = null;
+};
+
+let activeSavedNoteRanges: ActiveSavedNoteRange[] = [];
 
 export function clearActiveSavedNoteRange(): void {
-  activeSavedNoteRange = null;
+  activeSavedNoteRanges = [];
 }
 
+const SAVED_NOTES_KEY = "savedNotes";
 const PENDING_NOTE_PREFIX = "pendingNoteNavigation_";
 
 // Interface for representing a selected range in the transcript
@@ -32,6 +33,68 @@ type NoteSelection = {
   endOffset: number;
   preview: string;
 };
+
+// function getSelectedTranscriptRange(): NoteSelection | null {
+//   // what text is currenty selected in the transcript container
+//   const selection = window.getSelection();
+//   const container = document.getElementById("transcript-container");
+
+//   // if nothing selected just return null
+//   if (!selection || selection.isCollapsed || !container) {
+//     return null;
+//   }
+
+//   // A Range object describes where a selection starts and ends in the DOM.
+
+//   // get the range of the selection
+//   const range = selection.getRangeAt(0);
+
+//   // Only allow selections completely inside our transcript.
+//   if (
+//     !container.contains(range.startContainer) ||
+//     !container.contains(range.endContainer)
+//   ) {
+//     return null;
+//   }
+
+//   const segments = Array.from(
+//     container.querySelectorAll<HTMLElement>(".transcript-segment"),
+//   );
+
+//   const selectedSegments = segments.filter((segment) => {
+//     try {
+//       return range.intersectsNode(segment);
+//     } catch {
+//       return false;
+//     }
+//   });
+
+//   if (selectedSegments.length === 0) {
+//     return null;
+//   }
+
+//   const firstSegment = selectedSegments[0];
+//   const lastSegment = selectedSegments[selectedSegments.length - 1];
+
+//   // dataset reads HTML attributes as strings so we need to convert them to numbers and check if they are valid numbers
+//   const startTime = Number(firstSegment.dataset.start);
+//   const lastStart = Number(lastSegment.dataset.start);
+//   const lastDuration = Number(lastSegment.dataset.duration || 0);
+
+//   if (
+//     !Number.isFinite(startTime) ||
+//     !Number.isFinite(lastStart) ||
+//     !Number.isFinite(lastDuration)
+//   ) {
+//     return null;
+//   }
+
+//   return {
+//     startTime,
+//     endTime: lastStart + lastDuration,
+//     preview: selection.toString().trim().slice(0, 100),
+//   };
+// }
 
 function getSelectedTranscriptRange(): NoteSelection | null {
   // The returned object is the browser selection object and it has information about
@@ -211,59 +274,55 @@ function setupTranscriptNoteSaving(): void {
       preview: selectedRange.preview,
       createdAt: Date.now(),
     };
-    chrome.runtime.sendMessage(
-      { type: "SAVE_NOTE", note },
-      (response?: NotesResponse<SavedNote>) => {
-        if (chrome.runtime.lastError || !response) {
-          const error =
-            chrome.runtime.lastError?.message ??
-            "Could not reach the extension background.";
+    // spread the existing notes and add the new note to the array, then save it back to storage
+    chrome.storage.local.get([SAVED_NOTES_KEY], (result) => {
+      const notes = (result[SAVED_NOTES_KEY] || []) as (typeof note)[];
+      // this is an arrar of objects
+      // we are creating a new array with the existing notes and the new note added to it
+      const updatedNotes = [...notes, note];
 
-          console.error("Productive YouTube: Could not save note:", error);
-          alert("Could not save your note. Please try again.");
+      // Check if adding this note would exceed the storage quota
+      chrome.storage.local.getBytesInUse(null, (bytesInUse) => {
+        // here are finding the size of the existing notes and the new note to estimate if adding it would exceed the quota
+        const oldSize = new Blob([JSON.stringify(notes)]).size;
+        const newSize = new Blob([JSON.stringify(updatedNotes)]).size;
+        const estimatedBytes = newSize - oldSize;
+
+        const quota = chrome.storage.local.QUOTA_BYTES;
+
+        if (bytesInUse + estimatedBytes > quota) {
+          alert("Storage is full. Delete some saved notes before adding more.");
           return;
         }
 
-        if (!response.success) {
-          console.error(
-            "Productive YouTube: Could not save note:",
-            response.error,
-          );
-          alert(response.error);
-          return;
-        }
+        // save in local storage and then popup's useeffect has a
+        // listener to update the savedNotes state in the popup
+        //  when storage changes, so we don't need to do anything else here
+        chrome.storage.local.set({ [SAVED_NOTES_KEY]: updatedNotes }, () => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "Productive YouTube: Could not save note:",
+              chrome.runtime.lastError.message,
+            );
 
-        // Remember the newly saved note on this page.
-        activeSavedNoteRange = {
-          startTime: note.startTime,
-          endTime: note.endTime,
-          startSegmentStart: note.startSegmentStart,
-          endSegmentStart: note.endSegmentStart,
-          startOffset: note.startOffset,
-          endOffset: note.endOffset,
-        };
+            alert(
+              "Could not save your note. Your extension storage may be full.",
+            );
+            return;
+          }
 
-        // Make sure the CSS highlight style exists.
-        addSavedNoteStyles();
+          button.textContent = "Saved";
 
-        // Highlight the newly saved note immediately.
-        highlightSavedNote(
-          activeSavedNoteRange.startTime,
-          activeSavedNoteRange.endTime,
-          activeSavedNoteRange,
-        );
+          setTimeout(() => {
+            button.style.display = "none";
+            button.textContent = "Save note";
+          }, 1000);
 
-        button.textContent = "Saved";
-
-        setTimeout(() => {
-          button.style.display = "none";
-          button.textContent = "Save note";
-        }, 1000);
-
-        selectedRange = null;
-        window.getSelection()?.removeAllRanges();
-      },
-    );
+          selectedRange = null;
+          window.getSelection()?.removeAllRanges();
+        });
+      });
+    });
   });
 }
 type SavedNoteHighlightRange = {
@@ -294,12 +353,66 @@ function addSavedNoteStyles(): void {
   document.head.appendChild(style);
 }
 
+// ISSUE THAT NEEDS TO BE FIXED
+//  Highlight function is not working at the moment the storage key is being truncated in the url when we open the new tab, so we need to find a way to pass the full key to the new tab and retrieve the note from storage. maybe remove the token from url and pass the data like we are doing for the translate transcript feature where we are making a new tab and listening for tab changes and once we are in that tab we can see what note is associated to this one and then we can highlight it in the transcript.
+// function highlightSavedNote(startTime: number, endTime: number): void {
+//   console.log("highlightSavedNote called:", startTime, endTime);
+//   // get the transcript container so we can find the segments to highlight
+//   const container = document.getElementById("transcript-container");
+
+//   if (!container) return;
+
+//   // get all the transcript segments and highlight those that overlap with the saved note range
+//   const segments = container.querySelectorAll<HTMLElement>(
+//     ".transcript-segment",
+//   );
+
+//   console.log("Transcript container:", container);
+//   console.log("Transcript segments found:", segments.length);
+//   // we need to keep track of the first highlighted segment
+//   //  so we can scroll it into view after highlighting
+//   let firstHighlighted: HTMLElement | undefined;
+
+//   segments.forEach((segment) => {
+//     const start = Number(segment.dataset.start);
+//     const duration = Number(segment.dataset.duration || 0);
+//     const end = start + duration;
+
+//     //  the segment starts before the note ends and the segment ends after the note starts.
+//     // Highlight every transcript segment overlapping the saved range.
+//     if (start < endTime && end > startTime) {
+//       // since its overlapping so we assign this a new class to highlight it
+//       segment.classList.add("saved-note-segment");
+
+//       // the segment overlaps the selected range so we check if we have already
+//       //  set firstHighlighted, if not we set it to this segment
+//       if (!firstHighlighted) {
+//         firstHighlighted = segment;
+//       }
+
+//       console.log({
+//         segmentStart: start,
+//         segmentEnd: end,
+//         overlaps: start < endTime && end > startTime,
+//       });
+//     } else {
+//       segment.classList.remove("saved-note-segment");
+//     }
+//   });
+
+//   if (firstHighlighted !== undefined) {
+//     firstHighlighted.scrollIntoView({
+//       behavior: "smooth",
+//       block: "center",
+//     });
+//   }
+// }
+
+
 function highlightSavedNote(
-  startTime: number,
-  endTime: number,
-  preciseRange?: SavedNoteHighlightRange,
+  savedRanges: ActiveSavedNoteRange[],
 ): void {
-  console.log("highlightSavedNote called:", startTime, endTime);
+  console.log("highlightSavedNote called:", savedRanges.length, "notes");
 
   const container = document.getElementById("transcript-container");
   if (!container) return;
@@ -308,19 +421,22 @@ function highlightSavedNote(
     container.querySelectorAll<HTMLElement>(".transcript-segment"),
   );
 
-  // Remove any previous exact-text highlight.
   const css = window.CSS as any;
+
+  // Remove previous highlights before rebuilding all of them.
   css.highlights?.delete("saved-note-highlight");
 
-  // Remove the old whole-segment highlighting.
   segments.forEach((segment) => {
     segment.classList.remove("saved-note-segment");
   });
 
+  // This array will contain one DOM Range for each valid saved note.
+  const domRanges: Range[] = [];
+
   let firstHighlighted: HTMLElement | undefined;
 
-  // Find the transcript segments using their saved start timestamps.
-  if (preciseRange) {
+  // Process every saved note.
+  savedRanges.forEach((preciseRange) => {
     const startSegment = segments.find(
       (segment) =>
         Number(segment.dataset.start) === preciseRange.startSegmentStart,
@@ -331,8 +447,9 @@ function highlightSavedNote(
         Number(segment.dataset.start) === preciseRange.endSegmentStart,
     );
 
+    let exactRangeCreated = false;
+
     if (startSegment && endSegment) {
-      // first child here is the text node that was actually selected
       const startTextNode = startSegment.firstChild;
       const endTextNode = endSegment.firstChild;
 
@@ -343,53 +460,93 @@ function highlightSavedNote(
         const startLength = startTextNode.textContent?.length ?? 0;
         const endLength = endTextNode.textContent?.length ?? 0;
 
-        // Make sure the saved offsets are still valid.
-        if (
+        const validOffsets =
           Number.isInteger(preciseRange.startOffset) &&
           Number.isInteger(preciseRange.endOffset) &&
           preciseRange.startOffset >= 0 &&
           preciseRange.endOffset >= 0 &&
           preciseRange.startOffset <= startLength &&
-          preciseRange.endOffset <= endLength
-        ) {
+          preciseRange.endOffset <= endLength;
+
+        if (validOffsets) {
           const range = document.createRange();
-          // created a range to tell brower what was the selection
 
           range.setStart(startTextNode, preciseRange.startOffset);
           range.setEnd(endTextNode, preciseRange.endOffset);
 
-          // access browser's Highlight API to highlight the exact text range
-          const HighlightClass = (window as any).Highlight;
+          domRanges.push(range);
+          exactRangeCreated = true;
 
-          if (css.highlights && HighlightClass) {
-            // make a new highlight object with the range
-            const highlight = new HighlightClass(range);
-
-            // save it in the browser's highlight registry with a name so its registered now and it can find the css for it and apply the styles to it
-            css.highlights.set("saved-note-highlight", highlight);
-
+          if (!firstHighlighted) {
             firstHighlighted = startSegment;
-
-            console.log("Exact saved note text highlighted");
           }
         }
       }
     }
-  }
 
-  // Fallback for older notes or if exact highlighting isn't available.
-  if (!firstHighlighted) {
-    segments.forEach((segment) => {
-      const start = Number(segment.dataset.start);
-      const duration = Number(segment.dataset.duration || 0);
-      const end = start + duration;
+    // Fallback for this note if its exact text range cannot be reconstructed.
+    if (!exactRangeCreated) {
+      segments.forEach((segment) => {
+        const start = Number(segment.dataset.start);
+        const duration = Number(segment.dataset.duration || 0);
+        const end = start + duration;
 
-      if (start < endTime && end > startTime) {
-        segment.classList.add("saved-note-segment");
+        if (start < preciseRange.endTime && end > preciseRange.startTime) {
+          segment.classList.add("saved-note-segment");
 
-        if (!firstHighlighted) {
-          firstHighlighted = segment;
+          if (!firstHighlighted) {
+            firstHighlighted = segment;
+          }
         }
+      });
+    }
+  });
+
+  // Register all exact text ranges together.
+  const HighlightClass = (window as any).Highlight;
+
+  if (css.highlights && HighlightClass && domRanges.length > 0) {
+    const highlight = new HighlightClass(...domRanges);
+
+    css.highlights.set("saved-note-highlight", highlight);
+
+    console.log("Highlighted", domRanges.length, "exact note ranges");
+  } else if (domRanges.length > 0) {
+    // CSS Highlight API unavailable: use whole-segment highlighting instead.
+    domRanges.forEach((range) => {
+      const startNode = range.startContainer;
+      const startElement =
+        startNode instanceof Element ? startNode : startNode.parentElement;
+
+      const endNode = range.endContainer;
+      const endElement =
+        endNode instanceof Element ? endNode : endNode.parentElement;
+
+      const startSegment = startElement?.closest(".transcript-segment");
+      const endSegment = endElement?.closest(".transcript-segment");
+
+      const startTime = Number(
+        (startSegment as HTMLElement | null)?.dataset.start,
+      );
+      const endTime = Number(
+        (endSegment as HTMLElement | null)?.dataset.start,
+      );
+
+      const matchingRange = savedRanges.find(
+        (item) =>
+          item.startSegmentStart === startTime &&
+          item.endSegmentStart === endTime,
+      );
+
+      if (matchingRange) {
+        segments.forEach((segment) => {
+          const start = Number(segment.dataset.start);
+          const end = start + Number(segment.dataset.duration || 0);
+
+          if (start < matchingRange.endTime && end > matchingRange.startTime) {
+            segment.classList.add("saved-note-segment");
+          }
+        });
       }
     });
   }
@@ -402,6 +559,7 @@ function highlightSavedNote(
   }
 }
 
+
 function restorePendingNoteHighlight(): void {
   chrome.runtime.sendMessage({ type: "GET_SAVED_NOTE_RANGE" }, (response) => {
     if (chrome.runtime.lastError) {
@@ -410,50 +568,37 @@ function restorePendingNoteHighlight(): void {
         chrome.runtime.lastError.message,
       );
 
-      // If this transcript was already highlighted before a rerender,
-      // reapply the existing range.
-      if (activeSavedNoteRange) {
-        highlightSavedNote(
-          activeSavedNoteRange.startTime,
-          activeSavedNoteRange.endTime,
-          activeSavedNoteRange,
-        );
+      if (activeSavedNoteRanges.length > 0) {
+        highlightSavedNote(activeSavedNoteRanges);
       }
+
       return;
     }
 
-    // A saved note range was found for this tab. (a newly opened tab for the
-    // very first time)
+    // A specific saved note was opened in a new tab.
     if (response?.success && response.data) {
-      activeSavedNoteRange = {
-        startTime: response.data.startTime,
-        endTime: response.data.endTime,
-        startSegmentStart: response.data.startSegmentStart,
-        endSegmentStart: response.data.endSegmentStart,
-        startOffset: response.data.startOffset,
-        endOffset: response.data.endOffset,
-      };
+      activeSavedNoteRanges = [
+        {
+          startTime: response.data.startTime,
+          endTime: response.data.endTime,
+          startSegmentStart: response.data.startSegmentStart,
+          endSegmentStart: response.data.endSegmentStart,
+          startOffset: response.data.startOffset,
+          endOffset: response.data.endOffset,
+        },
+      ];
 
-      highlightSavedNote(
-        activeSavedNoteRange.startTime,
-        activeSavedNoteRange.endTime,
-        activeSavedNoteRange,
-      );
-
+      highlightSavedNote(activeSavedNoteRanges);
       return;
     }
 
-    // No new pending range was found.
-    // If we already have an active range, reapply it after transcript rerender.
-    if (activeSavedNoteRange) {
-      highlightSavedNote(
-        activeSavedNoteRange.startTime,
-        activeSavedNoteRange.endTime,
-        activeSavedNoteRange,
-      );
+    // No new pending note. Restore all ranges already active on this page.
+    if (activeSavedNoteRanges.length > 0) {
+      highlightSavedNote(activeSavedNoteRanges);
     }
   });
 }
+
 function getVideoTitle(): string {
   // Try multiple selectors to get the video title
   const titleSelectors = [
@@ -480,7 +625,7 @@ function getVideoTitle(): string {
 
   return "Video Title Not Found";
 }
-// the transcript parameter is an array of objects with text and start properties which is the timestamp in seconds. The function will display the transcript in a fixed container on the right side of the YouTube watch page, with options to copy, sync, translate, summarize, and create a vocabulary table from the transcript.
+
 export function displayTranscript(
   transcript: { text: string; start: number }[],
 ): void {
@@ -567,17 +712,15 @@ export function displayTranscript(
 
   transcript.forEach((line, index) => {
     // Decode HTML entities and clean the text
-
     let decodedText = decodeHtmlEntities(line.text);
     decodedText = cleanTranscriptText(decodedText);
 
     // Skip if text is empty after cleaning
     if (!decodedText) return;
-    // this chunkSize logic ensures that each chunk starts at a multiple of CHUNK_SIZE seconds, and groups lines accordingly. Each line's duration is calculated based on the start time of the next line, or a default of 2 seconds for the last line. This allows for accurate timing when displaying the transcript alongside the video.
+
     const chunkStart = Math.floor(line.start / CHUNK_SIZE) * CHUNK_SIZE; // Round down to nearest chunk
 
     // Calculate duration for this line
-    // we calculate the duration for each line by looking at the start time of the next line. If it's the last line, we can assume a default duration of 2 seconds.
     const nextStart =
       index < transcript.length - 1
         ? transcript[index + 1].start
@@ -589,14 +732,12 @@ export function displayTranscript(
       start: line.start,
       duration: lineDuration,
     };
-    // first condition is when there is no currentChunk object
+
     if (!currentChunk || currentChunk.start !== chunkStart) {
       // Start a new chunk
       if (currentChunk) {
         chunkedTranscript.push(currentChunk);
       }
-      //uper if wala condition false hogya cuz hamare paas currentChunk null hai, to phr hum currentChunk obj bana dete hain
-
       currentChunk = {
         start: chunkStart,
         lines: [lineData],
@@ -780,7 +921,6 @@ function setupHeaderButtons(
 function createCopyButton(chunkedTranscript: any[]): HTMLElement {
   const copyButton = document.createElement("button");
   copyButton.className = "transcript-copy-button";
-  //when the user hovers over the copy button, a tooltip will appear with the text "Copy transcript to clipboard"
   copyButton.title = "Copy transcript to clipboard";
 
   const copyIconSvg = document.createElementNS(
@@ -831,7 +971,6 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
   };
 
   copyButton.onclick = (e) => {
-    //this is to prevent the trnscript from  collapsing because the header has an onclick event that toggles the content display. By stopping propagation, we ensure that clicking the copy button does not trigger the header's click event because the event bubbles to the parent header
     e.stopPropagation();
 
     // Get video title
@@ -875,9 +1014,7 @@ function createCopyButton(chunkedTranscript: any[]): HTMLElement {
   return copyButton;
 }
 
-// This function creates a sync button that scrolls the transcript to the current timestamp of the video when clicked. It also highlights the active transcript segment based on the video's current time.
 function createSyncButton(content: HTMLElement): HTMLElement {
-  //contains the rendered transcript
   const syncButton = document.createElement("button");
   syncButton.className = "transcript-sync-button";
   syncButton.title = "Scroll to current timestamp";
@@ -932,13 +1069,9 @@ function createSyncButton(content: HTMLElement): HTMLElement {
 
   syncButton.onclick = (e) => {
     e.stopPropagation();
-
-    //video element
     const video = document.querySelector("video");
     if (video) {
-      //built in method to get the current time of the video in seconds
       const currentTime = video.currentTime;
-      //this will find the active transcript segment based on the current time of the video and scroll it into view. If no active segment is found, it will find the closest segment to the current time and scroll to that instead.
       const activeSegment = content.querySelector(
         ".transcript-segment.active",
       ) as HTMLElement | null;
@@ -950,24 +1083,17 @@ function createSyncButton(content: HTMLElement): HTMLElement {
         const scrollPosition = relativeTop - containerHeight / 2;
         content.scrollTo({ top: scrollPosition, behavior: "smooth" });
       } else {
-        //this is to find the closest timestamp to the current time of the video and scroll to that segment if no active segment is found.
         const segments = Array.from(
           content.querySelectorAll<HTMLElement>(".transcript-segment"),
         );
         let closestSegment: HTMLElement | null = null;
-        // our first calculated difference will be smaller than infinity
         let minDiff = Infinity;
 
         segments.forEach((segmentEl) => {
-          // we want to treat segment as an heml element so we can access its dataset properties like dataset.start
-          //because the starting timestamp will be a string
           const start = parseFloat(segmentEl.dataset.start || "0");
-          // the result will help us find the timestamp with the closest difference
           const diff = Math.abs(currentTime - start);
           if (diff < minDiff) {
-            // store timestamps, and whn you find the timestamp that is smaller than the prev timestamp then update the minDiff
             minDiff = diff;
-            // to update which segment is the closest. segment 1, 2, 3, or 4 etc
             closestSegment = segmentEl;
           }
         });
@@ -1071,7 +1197,6 @@ function createTranslateButton(chunkedTranscript: any[]): HTMLElement {
     }
 
     // Send message to background script with AI service selection
-    // acts as middleman between chrome extention and external services
     chrome.runtime.sendMessage(
       {
         type: "",
