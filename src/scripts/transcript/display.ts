@@ -95,6 +95,8 @@ type NoteSelection = {
 // }
 
 function getSelectedTranscriptRange(): NoteSelection | null {
+  // The returned object is the browser selection object and it has information about
+  // where selection starts and ends in DOM, the actual text selected, and whether the selection is collapsed (no text selected) or not.
   const selection = window.getSelection();
   const container = document.getElementById("transcript-container");
 
@@ -102,7 +104,21 @@ function getSelectedTranscriptRange(): NoteSelection | null {
     return null;
   }
 
+  // A Range represents a specific portion of the DOM. It has four important properties:
+  // range.startContainer - The node where the range starts
+  // range.startOffset - At which position inside that node the selecftion begins
+  // range.endContainer - The node where the range ends
+  // range.endOffset - At which position inside that node the selection ends
+
   const range = selection.getRangeAt(0);
+  // the range might look like this
+  //   {
+  //   startContainer: TextNode("Elon Musk became very successful"),
+  //   startOffset: 10,
+
+  //   endContainer: TextNode("work and how people make decisions"),
+  //   endOffset: 24
+  // }
 
   // Only allow selections completely inside our transcript.
   if (
@@ -112,33 +128,19 @@ function getSelectedTranscriptRange(): NoteSelection | null {
     return null;
   }
 
-  const segments = Array.from(
-    container.querySelectorAll<HTMLElement>(".transcript-segment"),
-  );
-
-  const selectedSegments = segments.filter((segment) => {
-    try {
-      return range.intersectsNode(segment);
-    } catch {
-      return false;
-    }
-  });
-
-  if (selectedSegments.length === 0) {
-    return null;
-  }
-
-  const firstSegment = selectedSegments[0];
-  const lastSegment = selectedSegments[selectedSegments.length - 1];
-
   // Find which transcript segment contains the actual start/end
   // of the user's selection.
+
+  // here our job is to The span where the selection starts.
+  // The span where the selection ends.
+  // The exact character position inside each span
   const startSegment =
+    // startContainer is the text node having selected text not the html element so we are finding its closest parent element with the class transcript-segment, if the startContainer is an element then we are finding its closest parent element with the class transcript-segment
     range.startContainer instanceof Element
       ? range.startContainer.closest<HTMLElement>(".transcript-segment")
       : range.startContainer.parentElement?.closest<HTMLElement>(
           ".transcript-segment",
-        );
+        ); // closest() method returns the closest ancestor of the current element (or the current element itself) which matches the selectors given in parameter. If there isn't such an ancestor, it returns null.
 
   const endSegment =
     range.endContainer instanceof Element
@@ -151,38 +153,16 @@ function getSelectedTranscriptRange(): NoteSelection | null {
     return null;
   }
 
-  // Calculate the character offset relative to a segment's own text.
-  function getOffsetWithinSegment(
-    segment: HTMLElement,
-    node: Node,
-    nodeOffset: number,
-  ): number {
-    const localRange = document.createRange();
+  const startOffset = range.startOffset;
+  const endOffset = range.endOffset;
 
-    localRange.selectNodeContents(segment);
-    localRange.setEnd(node, nodeOffset);
+  const startTime = Number(startSegment.dataset.start);
 
-    return localRange.toString().length;
-  }
+  const lastStart = Number(endSegment.dataset.start);
+  const lastDuration = Number(endSegment.dataset.duration || 0);
 
-  const startOffset = getOffsetWithinSegment(
-    startSegment,
-    range.startContainer,
-    range.startOffset,
-  );
-
-  const endOffset = getOffsetWithinSegment(
-    endSegment,
-    range.endContainer,
-    range.endOffset,
-  );
-
-  const startTime = Number(firstSegment.dataset.start);
-  const lastStart = Number(lastSegment.dataset.start);
-  const lastDuration = Number(lastSegment.dataset.duration || 0);
-
-  const startSegmentStart = Number(startSegment.dataset.start);
-  const endSegmentStart = Number(endSegment.dataset.start);
+  const startSegmentStart = startTime;
+  const endSegmentStart = lastStart;
 
   if (
     !Number.isFinite(startTime) ||
@@ -464,6 +444,7 @@ function highlightSavedNote(
     );
 
     if (startSegment && endSegment) {
+      // first child here is the text node that was actually selected 
       const startTextNode = startSegment.firstChild;
       const endTextNode = endSegment.firstChild;
 
@@ -484,15 +465,19 @@ function highlightSavedNote(
           preciseRange.endOffset <= endLength
         ) {
           const range = document.createRange();
+          // created a range to tell brower what was the selection
 
           range.setStart(startTextNode, preciseRange.startOffset);
           range.setEnd(endTextNode, preciseRange.endOffset);
 
+          // access browser's Highlight API to highlight the exact text range
           const HighlightClass = (window as any).Highlight;
 
           if (css.highlights && HighlightClass) {
+          // make a new highlight object with the range
             const highlight = new HighlightClass(range);
 
+            // save it in the browser's highlight registry with a name so its registered now and it can find the css for it and apply the styles to it
             css.highlights.set("saved-note-highlight", highlight);
 
             firstHighlighted = startSegment;
