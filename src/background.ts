@@ -2,10 +2,23 @@
 
 import { handleAuthMessage, registerAuthBroadcast } from "./auth/authService";
 import type { AuthRequest } from "./auth/types";
+import {
+  deleteSavedNote,
+  getSavedNotes,
+  saveNote,
+} from "./notes/notesService";
+import { isNotesRequest } from "./notes/types";
+import type { NotesRequest, NotesResponse } from "./notes/types";
+import type { SavedNote } from "./scripts/types";
 //immediately initializes when background.ts loads and registers a listener with supabase
 registerAuthBroadcast();
 // this listener waits for messages from other parts of my extention
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+  if (isNotesRequest(request)) {
+    if (_sender.id !== chrome.runtime.id) return false;
+    handleNotesRequest(request).then(sendResponse);
+    return true;
+  }
 
   //auth..
   if (typeof request.type === "string" && request.type.startsWith("AUTH_")) {
@@ -90,6 +103,28 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   return true;
 }
 });
+
+async function handleNotesRequest(
+request: NotesRequest,
+): Promise<NotesResponse<SavedNote | SavedNote[] | null>> {
+try {
+  switch (request.type) {
+    case "SAVE_NOTE":
+      return { success: true, data: await saveNote(request.note) };
+    case "GET_SAVED_NOTES":
+      return { success: true, data: await getSavedNotes() };
+    case "DELETE_SAVED_NOTE":
+      await deleteSavedNote(request.noteId);
+      return { success: true, data: null };
+  }
+} catch (error) {
+  const message =
+    error instanceof Error ? error.message : "The note operation failed.";
+  console.error("[NOTES ERROR]", error);
+  return { success: false, error: message };
+}
+}
+
 async function checkPendingSavedNote(
   sender: chrome.runtime.MessageSender
 ) {

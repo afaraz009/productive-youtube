@@ -15,6 +15,10 @@ import { FocusFeature } from "../scripts/types";
 type AIService = "chatgpt" | "gemini" | "claude" | "grok";
 
 import { SavedNote } from "../scripts/types";
+import {
+  deleteSavedNote as deleteSavedNoteFromCloud,
+  getSavedNotes,
+} from "../notes/notesApi";
 
 interface AIPrompts {
   translate: string;
@@ -175,6 +179,8 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
   const auth = useAuth();
   // State for saved notes and whether to show the "My Notes" screen
   const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [notesError, setNotesError] = useState<string | null>(null);
   const [showMyNotes, setShowMyNotes] = useState(false);
 
   const focusFeatures = [
@@ -265,29 +271,45 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
   }, []);
 
   useEffect(() => {
-    const loadNotes = () => {
-      chrome.storage.local.get(["savedNotes"], (result) => {
-        setSavedNotes(result.savedNotes || []);
+    if (auth.loading) return;
+
+    let active = true;
+    if (!auth.user) {
+      setSavedNotes([]);
+      setNotesError(null);
+      setNotesLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    setSavedNotes([]);
+    setNotesLoading(true);
+    setNotesError(null);
+
+    getSavedNotes()
+      .then((response) => {
+        if (!active) return;
+        if (response.success) {
+          setSavedNotes(response.data);
+        } else {
+          setNotesError(response.error);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setNotesError(
+          error instanceof Error ? error.message : "Could not load your notes.",
+        );
+      })
+      .finally(() => {
+        if (active) setNotesLoading(false);
       });
-    };
-
-    loadNotes();
-
-    const handleStorageChange = (
-      changes: { [key: string]: chrome.storage.StorageChange },
-      namespace: string,
-    ) => {
-      if (namespace === "local" && changes.savedNotes) {
-        setSavedNotes(changes.savedNotes.newValue || []);
-      }
-    };
-
-    chrome.storage.onChanged.addListener(handleStorageChange);
 
     return () => {
-      chrome.storage.onChanged.removeListener(handleStorageChange);
+      active = false;
     };
-  }, []);
+  }, [auth.loading, auth.user?.id]);
 
   // const openSavedNote = (note: SavedNote) => {
   //   // We use a unique token to identify the note navigation request. This token will be used to retrieve the note's start and end times when the new tab is opened.
@@ -350,20 +372,21 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
     );
   };
 
-  const deleteSavedNote = (noteId: string) => {
-    const updatedNotes = savedNotes.filter((note) => note.id !== noteId);
-
-    chrome.storage.local.set({ savedNotes: updatedNotes }, () => {
-      if (chrome.runtime.lastError) {
-        console.error(
-          "Could not delete saved note:",
-          chrome.runtime.lastError.message,
-        );
+  const deleteSavedNote = async (noteId: string) => {
+    setNotesError(null);
+    try {
+      const response = await deleteSavedNoteFromCloud(noteId);
+      if (!response.success) {
+        setNotesError(response.error);
         return;
       }
 
-      setSavedNotes(updatedNotes);
-    });
+      setSavedNotes((notes) => notes.filter((note) => note.id !== noteId));
+    } catch (error) {
+      setNotesError(
+        error instanceof Error ? error.message : "Could not delete the note.",
+      );
+    }
   };
 
   const handleFocusFeatureChange = (key: FocusFeature, checked: boolean) => {
@@ -505,11 +528,27 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
               </button>
             </div>
 
-            {savedNotes.length === 0 ? (
-              <p className="py-8 text-center text-sm text-gray-500">
-                No saved notes yet. Select text in a video transcript to save a
-                note.
+            {notesError && (
+              <p
+                role="alert"
+                className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"
+              >
+                {notesError}
               </p>
+            )}
+
+            {notesLoading ? (
+              <p className="py-8 text-center text-sm text-gray-500">
+                Loading your notes…
+              </p>
+            ) : savedNotes.length === 0 ? (
+              notesError ? null : (
+                <p className="py-8 text-center text-sm text-gray-500">
+                  {auth.user
+                    ? "No saved notes yet. Select text in a video transcript to save a note."
+                    : "Sign in to sync and view your saved notes."}
+                </p>
+              )
             ) : (
               <div className="space-y-4">
                 {/* 

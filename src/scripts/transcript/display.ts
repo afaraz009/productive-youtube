@@ -4,6 +4,8 @@ import {
   decodeHtmlEntities,
   cleanTranscriptText,
 } from "./utils";
+import type { NotesResponse } from "../../notes/types";
+import type { SavedNote } from "../types";
 
 let activeSavedNoteRange: {
   startTime: number;
@@ -18,7 +20,6 @@ export function clearActiveSavedNoteRange(): void {
   activeSavedNoteRange = null;
 }
 
-const SAVED_NOTES_KEY = "savedNotes";
 const PENDING_NOTE_PREFIX = "pendingNoteNavigation_";
 
 // Interface for representing a selected range in the transcript
@@ -292,55 +293,37 @@ function setupTranscriptNoteSaving(): void {
       preview: selectedRange.preview,
       createdAt: Date.now(),
     };
-    // spread the existing notes and add the new note to the array, then save it back to storage
-    chrome.storage.local.get([SAVED_NOTES_KEY], (result) => {
-      const notes = (result[SAVED_NOTES_KEY] || []) as (typeof note)[];
-      // this is an arrar of objects
-      // we are creating a new array with the existing notes and the new note added to it
-      const updatedNotes = [...notes, note];
-
-      // Check if adding this note would exceed the storage quota
-      chrome.storage.local.getBytesInUse(null, (bytesInUse) => {
-        // here are finding the size of the existing notes and the new note to estimate if adding it would exceed the quota
-        const oldSize = new Blob([JSON.stringify(notes)]).size;
-        const newSize = new Blob([JSON.stringify(updatedNotes)]).size;
-        const estimatedBytes = newSize - oldSize;
-
-        const quota = chrome.storage.local.QUOTA_BYTES;
-
-        if (bytesInUse + estimatedBytes > quota) {
-          alert("Storage is full. Delete some saved notes before adding more.");
+    chrome.runtime.sendMessage(
+      { type: "SAVE_NOTE", note },
+      (response?: NotesResponse<SavedNote>) => {
+        if (chrome.runtime.lastError || !response) {
+          const error =
+            chrome.runtime.lastError?.message ??
+            "Could not reach the extension background.";
+          console.error("Productive YouTube: Could not save note:", error);
+          alert("Could not save your note. Please try again.");
           return;
         }
 
-        // save in local storage and then popup's useeffect has a
-        // listener to update the savedNotes state in the popup
-        //  when storage changes, so we don't need to do anything else here
-        chrome.storage.local.set({ [SAVED_NOTES_KEY]: updatedNotes }, () => {
-          if (chrome.runtime.lastError) {
-            console.error(
-              "Productive YouTube: Could not save note:",
-              chrome.runtime.lastError.message,
-            );
+        if (!response.success) {
+          console.error(
+            "Productive YouTube: Could not save note:",
+            response.error,
+          );
+          alert(response.error);
+          return;
+        }
 
-            alert(
-              "Could not save your note. Your extension storage may be full.",
-            );
-            return;
-          }
+        button.textContent = "Saved";
+        setTimeout(() => {
+          button.style.display = "none";
+          button.textContent = "Save note";
+        }, 1000);
 
-          button.textContent = "Saved";
-
-          setTimeout(() => {
-            button.style.display = "none";
-            button.textContent = "Save note";
-          }, 1000);
-
-          selectedRange = null;
-          window.getSelection()?.removeAllRanges();
-        });
-      });
-    });
+        selectedRange = null;
+        window.getSelection()?.removeAllRanges();
+      },
+    );
   });
 }
 type SavedNoteHighlightRange = {

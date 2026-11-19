@@ -1,5 +1,6 @@
 //supabase javascript library
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "../notes/database.types";
 
 // we will use our custome adapter instead of the default one for session persistence
 const chromeStorageAdapter = {
@@ -22,7 +23,7 @@ const chromeStorageAdapter = {
 
 
 //client created
-export const supabase = createClient(
+export const supabase = createClient<Database>(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY,
   {
