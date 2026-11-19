@@ -66,16 +66,16 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   }
 
   // This msg is sent from popup to background when user clicks on a saved note in the popup
-    if (request.type === "OPEN_SAVED_NOTE") {
+  if (request.type === "OPEN_SAVED_NOTE") {
     handleSavedNoteOpen(
-  request.videoId,
-  request.startTime,
-  request.endTime,
-  request.startSegmentStart,
-  request.endSegmentStart,
-  request.startOffset,
-  request.endOffset,
-)
+      request.videoId,
+      request.startTime,
+      request.endTime,
+      request.startSegmentStart,
+      request.endSegmentStart,
+      request.startOffset,
+      request.endOffset,
+    )
       .then(sendResponse)
       .catch((error) => {
         sendResponse({ success: false, error: error.message });
@@ -84,7 +84,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   }
 
   // this is sent from the content script to the background when the new tab is opened and we want to get the saved note range from storage
-    if (request.type === "GET_SAVED_NOTE_RANGE") {
+  if (request.type === "GET_SAVED_NOTE_RANGE") {
     handleGetSavedNoteRange(_sender)
       .then(sendResponse)
       .catch((error) => {
@@ -94,14 +94,14 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   }
 
   if (request.type === "CHECK_PENDING_SAVED_NOTE") {
-  checkPendingSavedNote(_sender)
-    .then(sendResponse)
-    .catch((error) => {
-      sendResponse({ success: false, error: error.message });
-    });
+    checkPendingSavedNote(_sender)
+      .then(sendResponse)
+      .catch((error) => {
+        sendResponse({ success: false, error: error.message });
+      });
 
-  return true;
-}
+    return true;
+  }
 });
 
 async function handleNotesRequest(
@@ -125,9 +125,7 @@ try {
 }
 }
 
-async function checkPendingSavedNote(
-  sender: chrome.runtime.MessageSender
-) {
+async function checkPendingSavedNote(sender: chrome.runtime.MessageSender) {
   const tabId = sender.tab?.id;
 
   if (tabId === undefined) {
@@ -145,9 +143,7 @@ async function checkPendingSavedNote(
 }
 
 // this function is called when the content script sends a message to the background to get the saved note range for the newly opened tab
-async function handleGetSavedNoteRange(
-  sender: chrome.runtime.MessageSender
-) {
+async function handleGetSavedNoteRange(sender: chrome.runtime.MessageSender) {
   const tabId = sender.tab?.id;
 
   if (tabId === undefined) {
@@ -225,8 +221,8 @@ async function handleTranslation(text: string) {
     // Using MyMemory Translation API (completely free, no key required)
     const translateResponse = await fetch(
       `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
-        text
-      )}&langpair=en|ur`
+        text,
+      )}&langpair=en|ur`,
     );
 
     if (!translateResponse.ok) {
@@ -285,7 +281,7 @@ async function handleChatGPTOpen(content: string) {
     const tabId = tab.id;
     const listener = (
       updatedTabId: number,
-      changeInfo: chrome.tabs.TabChangeInfo
+      changeInfo: chrome.tabs.TabChangeInfo,
     ) => {
       if (updatedTabId === tabId && changeInfo.status === "complete") {
         // Inject the automation script
@@ -320,7 +316,7 @@ async function handleChatGPTOpen(content: string) {
   }
 }
 
-type AIService = 'chatgpt' | 'gemini' | 'claude' | 'grok';
+type AIService = "chatgpt" | "gemini" | "claude" | "grok";
 
 interface AIServiceConfig {
   url: string;
@@ -332,23 +328,23 @@ const AI_SERVICE_CONFIGS: Record<AIService, AIServiceConfig> = {
   chatgpt: {
     url: "https://chatgpt.com/",
     scriptFile: "chatgpt_automation.js",
-    storageKey: "chatgpt_content"
+    storageKey: "chatgpt_content",
   },
   gemini: {
     url: "https://gemini.google.com/app",
     scriptFile: "gemini_automation.js",
-    storageKey: "gemini_content"
+    storageKey: "gemini_content",
   },
   claude: {
     url: "https://claude.ai/",
     scriptFile: "claude_automation.js",
-    storageKey: "claude_content"
+    storageKey: "claude_content",
   },
   grok: {
     url: "https://grok.com/",
     scriptFile: "grok_automation.js",
-    storageKey: "grok_content"
-  }
+    storageKey: "grok_content",
+  },
 };
 
 async function handleAIServiceOpen(aiService: AIService, content: string) {
@@ -367,9 +363,9 @@ async function handleAIServiceOpen(aiService: AIService, content: string) {
       },
     });
 
-    // Open AI service in a new tab 
-    // chrome.tabs.create() returns a Promise. 
-    // When Chrome creates the new tab, that Promise resolves 
+    // Open AI service in a new tab
+    // chrome.tabs.create() returns a Promise.
+    // When Chrome creates the new tab, that Promise resolves
     // with a Tab object containing information about the tab, including its numeric id.
     const tab = await chrome.tabs.create({
       url: config.url,
@@ -381,15 +377,15 @@ async function handleAIServiceOpen(aiService: AIService, content: string) {
     }
 
     // Set up listener for when the tab finishes loading
-    const tabId = tab.id; // stores the tab ID for the newly created tab 
+    const tabId = tab.id; // stores the tab ID for the newly created tab
     // so we can check if the updated tab is the one we just opened
     const listener = (
       updatedTabId: number,
-      changeInfo: chrome.tabs.TabChangeInfo
+      changeInfo: chrome.tabs.TabChangeInfo,
     ) => {
       if (updatedTabId === tabId && changeInfo.status === "complete") {
-        // Inject the automation script 
-        // it is injected into the newly opened tab to automate the AI service 
+        // Inject the automation script
+        // it is injected into the newly opened tab to automate the AI service
         chrome.scripting
           .executeScript({
             target: { tabId: tabId },
@@ -416,7 +412,8 @@ async function handleAIServiceOpen(aiService: AIService, content: string) {
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : `Failed to open ${aiService}`,
+      error:
+        error instanceof Error ? error.message : `Failed to open ${aiService}`,
     };
   }
 }
