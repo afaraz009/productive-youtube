@@ -14,6 +14,7 @@ export function removeShorts(): void {
 
   SHORTS_SELECTORS.forEach((selector) => {
     const shortsShelves = document.querySelectorAll(selector);
+    console.log(`Productive YouTube: Found ${shortsShelves.length} Shorts shelf(s) for selector: ${selector}`);
     shortsShelves.forEach((shelf) => {
       const shelfElement = shelf as HTMLElement;
       if (shelfElement && !shelfElement.dataset.shortsRemoved) {

@@ -30,7 +30,7 @@ export function parseTranscript(xml: string): { text: string; start: number }[] 
       }
     }
     if (srv3Results.length > 0) {
-      return srv3Results;
+      return srv3Results; 
     }
 
     // Classic format: <text start="s" dur="s">content</text>

@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build && npm run copy-files",
+    "build": "vite build && npm run build:content && npm run copy-files",
+"build:content": "vite build --mode content_script && vite build --mode chatgpt_automation && vite build --mode gemini_automation && vite build --mode claude_automation && vite build --mode grok_automation",
     "preview": "vite preview",
     "watch": "vite build --watch",
     "clean": "rimraf dist",

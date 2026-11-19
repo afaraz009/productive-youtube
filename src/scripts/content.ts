@@ -30,7 +30,7 @@ import {
   isWatchPage,
   isHomePage,
 } from "./transcript";
-
+import { clearActiveSavedNoteRange } from "./transcript/display";
 // Track last video ID to detect video changes during SPA navigation
 let lastVideoId: string | null = null;
 
@@ -127,6 +127,34 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
       }
     }
 
+
+// Enforce Focus Lock in the content script
+const lockIsActive =
+  settings.focusLockEnabled &&
+  settings.focusLockUntil > Date.now();
+
+if (lockIsActive) {
+  const restoreSettings: Partial<Settings> = {};
+
+  settings.focusLockFeatures.forEach((key) => {
+    const expectedValue = settings.focusLockValues[key];
+
+    if (
+      expectedValue !== undefined &&
+      changes[key]?.newValue !== undefined &&
+      changes[key].newValue !== expectedValue
+    ) {
+      restoreSettings[key] = expectedValue;
+    }
+  });
+
+  if (Object.keys(restoreSettings).length > 0) {
+    updateSettings(restoreSettings);
+    chrome.storage.local.set(restoreSettings);
+  }
+}
+
+
     // If settings changed, apply them immediately
     if (needsUpdate) {
       applyAllRemovals();
@@ -144,6 +172,7 @@ function handleYouTubeNavigation(): void {
     // Only show transcript if video changed or first load
     if (currentVideoId && currentVideoId !== lastVideoId) {
       lastVideoId = currentVideoId;
+      clearActiveSavedNoteRange();
 
       // Give YouTube more time to render the page on SPA navigation
       setTimeout(() => {
@@ -154,6 +183,7 @@ function handleYouTubeNavigation(): void {
     removeVideoSuggestions();
   } else {
     lastVideoId = null;
+    clearActiveSavedNoteRange();
     cleanupTranscript(); // Remove transcript when navigating away from watch page
   }
 

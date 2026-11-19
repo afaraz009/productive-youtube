@@ -34,6 +34,30 @@ export function cleanupTranscript(): void {
   currentVideoId = null;
 }
 
+function checkPendingSavedNote(): Promise<boolean> {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      { type: "CHECK_PENDING_SAVED_NOTE" },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            "Could not check pending saved note:",
+            chrome.runtime.lastError.message
+          );
+
+          resolve(false);
+          return;
+        }
+
+        resolve(
+          response?.success === true &&
+          response?.isPending === true
+        );
+      }
+    );
+  });
+}
+
 export async function showVideoTranscript(): Promise<void> {
   console.log(
     "Productive YouTube: showVideoTranscript called, showTranscript setting:",
@@ -47,10 +71,23 @@ export async function showVideoTranscript(): Promise<void> {
     return;
   }
 
-  if (!settings.showTranscript) {
+  // If transcript is OFF, check whether this tab was opened through a saved note.
+  let openedThroughSavedNote = false;
+
+   if (!settings.showTranscript) {
+    openedThroughSavedNote = await checkPendingSavedNote();
+  }
+
+  
+  if (!settings.showTranscript && !openedThroughSavedNote) {
     cleanupTranscript();
     return;
   }
+
+  // if (!settings.showTranscript) {
+  //   cleanupTranscript();
+  //   return;
+  // }
 
   // Use retry logic to handle timing issues
   const result = await retryWithBackoff(
