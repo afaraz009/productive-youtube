@@ -59,7 +59,7 @@ jobs:
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
 
       # Applies only migrations that are not yet recorded on the remote database.
-      # The flag must target the linked remote project, not a local database.
-      # Use whichever one `supabase db push --help` shows (--remote or --linked).
+      # --remote targets the linked project, not a local database.
+      # --yes is required because CI has no terminal to answer the confirmation prompt.
       - name: Apply pending migrations
-        run: supabase db push --remote
+        run: supabase db push --remote --yes
