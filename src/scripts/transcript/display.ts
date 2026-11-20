@@ -386,6 +386,8 @@ function setupTranscriptNoteSaving(): void {
 
         // Rebuild all highlights, but scroll to the newly saved note.
         addSavedNoteStyles();
+
+        // pass active ranges array to highlight all and the newly created note to the highlight function so will scroll to that note instead of the first one
         highlightSavedNote(activeSavedNoteRanges, newRange);
         button.textContent = "Saved";
 
@@ -580,6 +582,7 @@ function highlightSavedNote(
   const targetSegment = scrollToRange
     ? segments.find(
         (segment) =>
+          // the segment whose starting timestamp is same as the scrollToRange's starting timestamp save that as target timestamp to scoll to
           Number(segment.dataset.start) === scrollToRange.startSegmentStart,
       )
     : firstHighlighted;
