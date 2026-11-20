@@ -371,20 +371,22 @@ function setupTranscriptNoteSaving(): void {
           return;
         }
 
-        // Add this newly saved note's range without removing older ranges.
-        activeSavedNoteRanges.push({
+        // Create the range for the newly saved note.
+        const newRange: ActiveSavedNoteRange = {
           startTime: note.startTime,
           endTime: note.endTime,
           startSegmentStart: note.startSegmentStart,
           endSegmentStart: note.endSegmentStart,
           startOffset: note.startOffset,
           endOffset: note.endOffset,
-        });
+        };
 
-        // Rebuild the highlights using every active saved range.
+        // Keep all previous ranges and add the new one.
+        activeSavedNoteRanges.push(newRange);
+
+        // Rebuild all highlights, but scroll to the newly saved note.
         addSavedNoteStyles();
-        highlightSavedNote(activeSavedNoteRanges);
-
+        highlightSavedNote(activeSavedNoteRanges, newRange);
         button.textContent = "Saved";
 
         setTimeout(() => {
@@ -426,7 +428,10 @@ function addSavedNoteStyles(): void {
 
   document.head.appendChild(style);
 }
-function highlightSavedNote(savedRanges: ActiveSavedNoteRange[]): void {
+function highlightSavedNote(
+  savedRanges: ActiveSavedNoteRange[],
+  scrollToRange?: ActiveSavedNoteRange,
+): void {
   console.log("highlightSavedNote called:", savedRanges.length, "notes");
 
   const container = document.getElementById("transcript-container");
@@ -486,14 +491,12 @@ function highlightSavedNote(savedRanges: ActiveSavedNoteRange[]): void {
           preciseRange.endOffset <= endLength;
 
         if (validOffsets) {
-
           // 2. create the browser range for that note details
           const range = document.createRange();
 
           // where the selection begings
           range.setStart(startTextNode, preciseRange.startOffset);
           range.setEnd(endTextNode, preciseRange.endOffset);
-
 
           // 3. Store the browser range
           domRanges.push(range);
@@ -528,7 +531,6 @@ function highlightSavedNote(savedRanges: ActiveSavedNoteRange[]): void {
   const HighlightClass = (window as any).Highlight;
 
   if (css.highlights && HighlightClass && domRanges.length > 0) {
-
     // 4. Register the DOM ranges with the hughlight API so it can aplly the below css class
     const highlight = new HighlightClass(...domRanges);
 
@@ -573,8 +575,17 @@ function highlightSavedNote(savedRanges: ActiveSavedNoteRange[]): void {
     });
   }
 
-  if (firstHighlighted) {
-    firstHighlighted.scrollIntoView({
+  // If a specific note was provided, scroll to that note.
+  // Otherwise, keep the existing first-highlight behaviour.
+  const targetSegment = scrollToRange
+    ? segments.find(
+        (segment) =>
+          Number(segment.dataset.start) === scrollToRange.startSegmentStart,
+      )
+    : firstHighlighted;
+
+  if (targetSegment) {
+    targetSegment.scrollIntoView({
       behavior: "smooth",
       block: "center",
     });
@@ -582,12 +593,10 @@ function highlightSavedNote(savedRanges: ActiveSavedNoteRange[]): void {
 }
 
 function restorePendingNoteHighlight(): void {
-
   // 1 . take the video id
   const videoId = new URL(window.location.href).searchParams.get("v");
 
   if (!videoId) return;
-
 
   // 2. First, fetch all notes belonging to the signed-in user from Supabase.
   chrome.runtime.sendMessage(
@@ -611,7 +620,7 @@ function restorePendingNoteHighlight(): void {
       );
 
       // Convert every saved note into the format used by the
-      // existing multi-highlight function. 
+      // existing multi-highlight function.
       // from each not got from supabase make activesavednotesrange to pass the data needed to highlight the notes
       activeSavedNoteRanges = videoNotes.map((note) => ({
         startTime: note.startTime,
@@ -645,7 +654,7 @@ function restorePendingNoteHighlight(): void {
             };
 
             // Check whether this note is already in the Supabase results.
-            // now we have all the notes from the supabase we are finding the index of the note whose data is same as that of the note clicked which is basically the pending note range here 
+            // now we have all the notes from the supabase we are finding the index of the note whose data is same as that of the note clicked which is basically the pending note range here
 
             const existingIndex = activeSavedNoteRanges.findIndex(
               (range) =>
@@ -657,12 +666,14 @@ function restorePendingNoteHighlight(): void {
 
             // Avoid adding the same note twice.
             if (existingIndex !== -1) {
-              // removed the selected note that was already in supabase and returns it 
-              const [selectedRange] = activeSavedNoteRanges.splice(existingIndex,1,);
+              // removed the selected note that was already in supabase and returns it
+              const [selectedRange] = activeSavedNoteRanges.splice(
+                existingIndex,
+                1,
+              );
               // we shift that new note to the starting position
               activeSavedNoteRanges.unshift(selectedRange);
             } else {
-
               // if the note is not in the supabase we just push it to the start of the active range
               activeSavedNoteRanges.unshift(pendingRange);
             }

@@ -486,11 +486,8 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
             className="w-full flex items-center justify-between rounded-xl border border-[#cbded8] bg-white px-4 py-3 text-left shadow-sm hover:border-[#086972] hover:bg-[#f3f8f5] transition-all"
           >
             <div>
-              <p className="text-[13px] font-semibold text-[#263e40]">
+              <p className="text-[15px] font-semibold text-[#263e40]">
                 My Notes
-              </p>
-              <p className="text-[10px] text-[#879493] mt-0.5">
-                Revisit your saved moments
               </p>
             </div>
 
