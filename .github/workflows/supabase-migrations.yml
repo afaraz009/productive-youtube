@@ -1,0 +1,65 @@
+name: Supabase migrations
+
+# Pull requests: check that the migrations apply cleanly to an empty database.
+# Push to the deploy branch: after the check passes, apply new migrations
+# to the real Supabase project. Change notes-integration to main when you are ready.
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/supabase-migrations.yml"
+  push:
+    branches: [notes-integration]
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/supabase-migrations.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Starts a temporary local Supabase and applies every migration in order.
+      # A SQL error in any migration fails this step.
+      - name: Apply migrations to a temporary database
+        run: supabase start
+
+      - name: Stop temporary database
+        if: always()
+        run: supabase stop --no-backup
+
+  deploy:
+    needs: validate
+    if: github.ref == 'refs/heads/notes-integration' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # Optional: create an Environment named "production" in GitHub
+    # (Settings > Environments) and add required reviewers for a manual approval step.
+    # environment: production
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to the Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+
+      # Applies only migrations that are not yet recorded on the remote database.
+      # The flag must target the linked remote project, not a local database.
+      # Use whichever one `supabase db push --help` shows (--remote or --linked).
+      - name: Apply pending migrations
+        run: supabase db push --remote
