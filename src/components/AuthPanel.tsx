@@ -1,5 +1,3 @@
-//AuthPanel.tsx displays the form 
-
 import React, { useState } from "react";
 import type { AuthResponse } from "../auth/types";
 
@@ -16,23 +14,22 @@ interface AuthPanelProps {
 }
 
 const inputClass =
-  "w-full px-3 py-2 text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#802C62] focus:ring-1 focus:ring-[#802C62]";
+  "w-full px-3.5 py-2.5 text-xs font-medium rounded-lg border border-[#e5ebe7] dark:border-slate-700 bg-[#faf9f5] dark:bg-slate-800 text-[#263e40] dark:text-slate-100 placeholder-[#879493] focus:outline-none focus:border-[#086972] focus:ring-2 focus:ring-[#086972]/30 transition-all";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-//signup ... the auth panel recieves the props from AuthPage 
 const AuthPanel: React.FC<AuthPanelProps> = ({
   mode,
   onModeChange,
   busy,
   error,
   onSignIn,
-  //signup ... 
   onSignUp,
   onClearError,
 }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -81,18 +78,17 @@ const AuthPanel: React.FC<AuthPanelProps> = ({
   const shownError = localError ?? error;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {/* Email Input */}
       <div>
-        <label
-          htmlFor="auth-email"
-          className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5"
-        >
+        <label htmlFor="auth-email" className="sr-only">
           Email
         </label>
         <input
           id="auth-email"
           type="email"
           autoComplete="email"
+          placeholder="Enter Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={onKeyDown}
@@ -100,51 +96,100 @@ const AuthPanel: React.FC<AuthPanelProps> = ({
         />
       </div>
 
-      <div>
-        <label
-          htmlFor="auth-password"
-          className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5"
-        >
+      {/* Password Input with Inline Show / Hide Toggle */}
+      <div className="relative">
+        <label htmlFor="auth-password" className="sr-only">
           Password
         </label>
         <input
           id="auth-password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           autoComplete={mode === "login" ? "current-password" : "new-password"}
+          placeholder="Passcode"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={onKeyDown}
-          className={inputClass}
+          className={`${inputClass} pr-14`}
         />
+        <button
+          type="button"
+          onClick={() => setShowPassword((prev) => !prev)}
+          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-[#086972] dark:text-teal-300 hover:text-[#07545b] transition-colors"
+        >
+          {showPassword ? "Hide" : "Show"}
+        </button>
       </div>
 
+      {/* Helper Link */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() =>
+            setNotice(
+              mode === "login"
+                ? "Use the email and 8+ character password you registered with."
+                : "Choose an email and at least 8 characters for your password."
+            )
+          }
+          className="text-[11px] font-semibold text-[#879493] dark:text-slate-400 hover:text-[#086972] dark:hover:text-teal-300 transition-colors"
+        >
+          {mode === "login"
+            ? "Having trouble in sign in?"
+            : "Password must be at least 8 characters"}
+        </button>
+      </div>
+
+      {/* Validation Error / Status Notice */}
       {shownError && (
         <p role="alert" className="text-xs text-red-600 dark:text-red-400">
           {shownError}
         </p>
       )}
       {notice && (
-        <p role="status" className="text-xs text-emerald-700 dark:text-emerald-400">
+        <p
+          role="status"
+          className="text-xs text-[#086972] dark:text-teal-300 font-medium"
+        >
           {notice}
         </p>
       )}
 
-      <button
-        onClick={() => void submit()}
-        disabled={busy}
-        className="w-full px-3 py-2.5 text-sm font-medium rounded-md bg-[#802C62] text-white hover:bg-[#6d2653] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-      >
-        {busy ? "Please wait…" : mode === "login" ? "Log in" : "Sign up"}
-      </button>
+      {/* Primary Submit Button */}
+      <div className="pt-1">
+        <button
+          type="button"
+          onClick={() => void submit()}
+          disabled={busy}
+          className="w-full py-2.5 px-4 text-xs font-semibold rounded-lg bg-[#086972] hover:bg-[#07545b] text-white disabled:opacity-60 disabled:cursor-not-allowed transition-colors shadow-sm"
+        >
+          {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
+        </button>
+      </div>
 
-      <button
-        onClick={switchMode}
-        className="w-full text-xs text-slate-500 dark:text-slate-400 hover:text-[#802C62] dark:hover:text-slate-200 transition-colors"
-      >
-        {mode === "login"
-          ? "No account? Sign up"
-          : "Already have an account? Log in"}
-      </button>
+      {/* Mode Switch Prompt */}
+      <div className="pt-3 border-t border-[#e5ebe7] dark:border-slate-800 text-center">
+        <button
+          type="button"
+          onClick={switchMode}
+          className="text-[11px] text-[#879493] dark:text-slate-400 hover:text-[#263e40] dark:hover:text-slate-100 transition-colors"
+        >
+          {mode === "login" ? (
+            <>
+              Don’t have an account?{" "}
+              <span className="font-bold text-[#086972] dark:text-teal-300">
+                Sign up now
+              </span>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <span className="font-bold text-[#086972] dark:text-teal-300">
+                Sign in
+              </span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 };
