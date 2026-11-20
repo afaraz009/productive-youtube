@@ -341,6 +341,12 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
     );
   };
 
+  const openSavedVideo = (videoId: string) => {
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
+
+    chrome.tabs.create({ url });
+  };
+
   const deleteSavedNote = async (noteId: string) => {
     setNotesError(null);
     try {
@@ -451,7 +457,7 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
               Your mindful YouTube experience
             </p>
           </div>
-          \
+
           <span className="text-[9px] font-semibold tracking-wider uppercase text-teal-50 bg-white/15 px-2.5 py-1 rounded-full">
             FOCUS
           </span>
@@ -535,9 +541,13 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
               and so we use Object.entries() to convert it to an array of key-value pairs so now each element is a [videoId, notes] pair with notes being the array of notes for that video having that videoId , videotitle, starting and ending times, preview and createdAt */}
                 {Object.entries(groupedNotes).map(([videoId, notes]) => (
                   <div key={videoId} className="border-b border-gray-200 pb-3">
-                    <h3 className="mb-2 text-sm font-semibold text-gray-900">
+                    <button
+                      onClick={() => openSavedVideo(videoId)}
+                      className="mb-2 text-left text-sm font-semibold text-gray-900 hover:text-[#086972] hover:underline transition-colors"
+                      title="Open video"
+                    >
                       {notes[0].videoTitle}
-                    </h3>
+                    </button>
 
                     <div className="space-y-2">
                       {notes.map((note) => (

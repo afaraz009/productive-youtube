@@ -4,6 +4,8 @@ import {
   decodeHtmlEntities,
   cleanTranscriptText,
 } from "./utils";
+import type { NotesResponse } from "../../notes/types";
+import type { SavedNote } from "../types";
 
 type ActiveSavedNoteRange = {
   startTime: number;
@@ -187,6 +189,145 @@ function getSelectedTranscriptRange(): NoteSelection | null {
   };
 }
 
+// function setupTranscriptNoteSaving(): void {
+//   if (document.getElementById("save-transcript-note-button")) {
+//     return;
+//   }
+
+//   const button = document.createElement("button");
+//   button.id = "save-transcript-note-button";
+//   button.textContent = "Save note";
+
+//   button.style.cssText = `
+//     position: fixed;
+//     display: none;
+//     z-index: 10000;
+//     padding: 8px 14px;
+//     border: none;
+//     border-radius: 6px;
+//     background: #086972;
+//     color: white;
+//     font-size: 13px;
+//     font-weight: 600;
+//     cursor: pointer;
+//     box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+//   `;
+
+//   document.body.appendChild(button);
+
+//   let selectedRange: NoteSelection | null = null;
+
+//   document.addEventListener("mouseup", () => {
+//     // Allow the browser to finish updating the selection first.
+//     setTimeout(() => {
+//       const selection = getSelectedTranscriptRange();
+
+//       // if nothing is selected, hide the button
+//       if (!selection) {
+//         selectedRange = null;
+//         button.style.display = "none";
+//         return;
+//       }
+
+//       selectedRange = selection;
+
+//       const browserSelection = window.getSelection();
+//       if (!browserSelection || browserSelection.rangeCount === 0) {
+//         return;
+//       }
+
+//       // it helps us to set the position of the button to be near the selected text in the transcript container
+//       const rect = browserSelection.getRangeAt(0).getBoundingClientRect();
+
+//       button.style.left = `${Math.max(8, rect.left + rect.width / 2 - 45)}px`;
+//       button.style.top = `${Math.max(8, rect.top - 42)}px`;
+//       button.style.display = "block";
+//     }, 0);
+//   });
+
+//   button.addEventListener("mousedown", (event) => {
+//     // Prevent clicking the button from clearing the text selection before we
+//     // access it in the click handler. This is a workaround for the fact that clicking a button will clear the selection.
+//     event.preventDefault();
+//   });
+
+//   button.addEventListener("click", () => {
+//     if (!selectedRange) return;
+
+//     const videoId = new URL(window.location.href).searchParams.get("v");
+
+//     if (!videoId) {
+//       alert("Could not identify this video.");
+//       return;
+//     }
+
+//     const note = {
+//       id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+//       videoId,
+//       videoTitle: getVideoTitle(),
+//       startTime: selectedRange.startTime,
+//       endTime: selectedRange.endTime,
+
+//       startSegmentStart: selectedRange.startSegmentStart,
+//       endSegmentStart: selectedRange.endSegmentStart,
+//       startOffset: selectedRange.startOffset,
+//       endOffset: selectedRange.endOffset,
+
+//       preview: selectedRange.preview,
+//       createdAt: Date.now(),
+//     };
+//     // spread the existing notes and add the new note to the array, then save it back to storage
+//     chrome.storage.local.get([SAVED_NOTES_KEY], (result) => {
+//       const notes = (result[SAVED_NOTES_KEY] || []) as (typeof note)[];
+//       // this is an arrar of objects
+//       // we are creating a new array with the existing notes and the new note added to it
+//       const updatedNotes = [...notes, note];
+
+//       // Check if adding this note would exceed the storage quota
+//       chrome.storage.local.getBytesInUse(null, (bytesInUse) => {
+//         // here are finding the size of the existing notes and the new note to estimate if adding it would exceed the quota
+//         const oldSize = new Blob([JSON.stringify(notes)]).size;
+//         const newSize = new Blob([JSON.stringify(updatedNotes)]).size;
+//         const estimatedBytes = newSize - oldSize;
+
+//         const quota = chrome.storage.local.QUOTA_BYTES;
+
+//         if (bytesInUse + estimatedBytes > quota) {
+//           alert("Storage is full. Delete some saved notes before adding more.");
+//           return;
+//         }
+
+//         // save in local storage and then popup's useeffect has a
+//         // listener to update the savedNotes state in the popup
+//         //  when storage changes, so we don't need to do anything else here
+//         chrome.storage.local.set({ [SAVED_NOTES_KEY]: updatedNotes }, () => {
+//           if (chrome.runtime.lastError) {
+//             console.error(
+//               "Productive YouTube: Could not save note:",
+//               chrome.runtime.lastError.message,
+//             );
+
+//             alert(
+//               "Could not save your note. Your extension storage may be full.",
+//             );
+//             return;
+//           }
+
+//           button.textContent = "Saved";
+
+//           setTimeout(() => {
+//             button.style.display = "none";
+//             button.textContent = "Save note";
+//           }, 1000);
+
+//           selectedRange = null;
+//           window.getSelection()?.removeAllRanges();
+//         });
+//       });
+//     });
+//   });
+// }
+
 function setupTranscriptNoteSaving(): void {
   if (document.getElementById("save-transcript-note-button")) {
     return;
@@ -216,11 +357,9 @@ function setupTranscriptNoteSaving(): void {
   let selectedRange: NoteSelection | null = null;
 
   document.addEventListener("mouseup", () => {
-    // Allow the browser to finish updating the selection first.
     setTimeout(() => {
       const selection = getSelectedTranscriptRange();
 
-      // if nothing is selected, hide the button
       if (!selection) {
         selectedRange = null;
         button.style.display = "none";
@@ -234,7 +373,6 @@ function setupTranscriptNoteSaving(): void {
         return;
       }
 
-      // it helps us to set the position of the button to be near the selected text in the transcript container
       const rect = browserSelection.getRangeAt(0).getBoundingClientRect();
 
       button.style.left = `${Math.max(8, rect.left + rect.width / 2 - 45)}px`;
@@ -244,8 +382,6 @@ function setupTranscriptNoteSaving(): void {
   });
 
   button.addEventListener("mousedown", (event) => {
-    // Prevent clicking the button from clearing the text selection before we
-    // access it in the click handler. This is a workaround for the fact that clicking a button will clear the selection.
     event.preventDefault();
   });
 
@@ -265,66 +401,65 @@ function setupTranscriptNoteSaving(): void {
       videoTitle: getVideoTitle(),
       startTime: selectedRange.startTime,
       endTime: selectedRange.endTime,
-
       startSegmentStart: selectedRange.startSegmentStart,
       endSegmentStart: selectedRange.endSegmentStart,
       startOffset: selectedRange.startOffset,
       endOffset: selectedRange.endOffset,
-
       preview: selectedRange.preview,
       createdAt: Date.now(),
     };
-    // spread the existing notes and add the new note to the array, then save it back to storage
-    chrome.storage.local.get([SAVED_NOTES_KEY], (result) => {
-      const notes = (result[SAVED_NOTES_KEY] || []) as (typeof note)[];
-      // this is an arrar of objects
-      // we are creating a new array with the existing notes and the new note added to it
-      const updatedNotes = [...notes, note];
 
-      // Check if adding this note would exceed the storage quota
-      chrome.storage.local.getBytesInUse(null, (bytesInUse) => {
-        // here are finding the size of the existing notes and the new note to estimate if adding it would exceed the quota
-        const oldSize = new Blob([JSON.stringify(notes)]).size;
-        const newSize = new Blob([JSON.stringify(updatedNotes)]).size;
-        const estimatedBytes = newSize - oldSize;
+    chrome.runtime.sendMessage(
+      { type: "SAVE_NOTE", note },
+      (response?: NotesResponse<SavedNote>) => {
+        if (chrome.runtime.lastError || !response) {
+          const error =
+            chrome.runtime.lastError?.message ??
+            "Could not reach the extension background.";
 
-        const quota = chrome.storage.local.QUOTA_BYTES;
-
-        if (bytesInUse + estimatedBytes > quota) {
-          alert("Storage is full. Delete some saved notes before adding more.");
+          console.error("Productive YouTube: Could not save note:", error);
+          alert("Could not save your note. Please try again.");
           return;
         }
 
-        // save in local storage and then popup's useeffect has a
-        // listener to update the savedNotes state in the popup
-        //  when storage changes, so we don't need to do anything else here
-        chrome.storage.local.set({ [SAVED_NOTES_KEY]: updatedNotes }, () => {
-          if (chrome.runtime.lastError) {
-            console.error(
-              "Productive YouTube: Could not save note:",
-              chrome.runtime.lastError.message,
-            );
+        if (!response.success) {
+          console.error(
+            "Productive YouTube: Could not save note:",
+            response.error,
+          );
 
-            alert(
-              "Could not save your note. Your extension storage may be full.",
-            );
-            return;
-          }
+          alert(response.error);
+          return;
+        }
 
-          button.textContent = "Saved";
-
-          setTimeout(() => {
-            button.style.display = "none";
-            button.textContent = "Save note";
-          }, 1000);
-
-          selectedRange = null;
-          window.getSelection()?.removeAllRanges();
+        // Add this newly saved note's range without removing older ranges.
+        activeSavedNoteRanges.push({
+          startTime: note.startTime,
+          endTime: note.endTime,
+          startSegmentStart: note.startSegmentStart,
+          endSegmentStart: note.endSegmentStart,
+          startOffset: note.startOffset,
+          endOffset: note.endOffset,
         });
-      });
-    });
+
+        // Rebuild the highlights using every active saved range.
+        addSavedNoteStyles();
+        highlightSavedNote(activeSavedNoteRanges);
+
+        button.textContent = "Saved";
+
+        setTimeout(() => {
+          button.style.display = "none";
+          button.textContent = "Save note";
+        }, 1000);
+
+        selectedRange = null;
+        window.getSelection()?.removeAllRanges();
+      },
+    );
   });
 }
+
 type SavedNoteHighlightRange = {
   startSegmentStart: number;
   endSegmentStart: number;
@@ -352,66 +487,7 @@ function addSavedNoteStyles(): void {
 
   document.head.appendChild(style);
 }
-
-// ISSUE THAT NEEDS TO BE FIXED
-//  Highlight function is not working at the moment the storage key is being truncated in the url when we open the new tab, so we need to find a way to pass the full key to the new tab and retrieve the note from storage. maybe remove the token from url and pass the data like we are doing for the translate transcript feature where we are making a new tab and listening for tab changes and once we are in that tab we can see what note is associated to this one and then we can highlight it in the transcript.
-// function highlightSavedNote(startTime: number, endTime: number): void {
-//   console.log("highlightSavedNote called:", startTime, endTime);
-//   // get the transcript container so we can find the segments to highlight
-//   const container = document.getElementById("transcript-container");
-
-//   if (!container) return;
-
-//   // get all the transcript segments and highlight those that overlap with the saved note range
-//   const segments = container.querySelectorAll<HTMLElement>(
-//     ".transcript-segment",
-//   );
-
-//   console.log("Transcript container:", container);
-//   console.log("Transcript segments found:", segments.length);
-//   // we need to keep track of the first highlighted segment
-//   //  so we can scroll it into view after highlighting
-//   let firstHighlighted: HTMLElement | undefined;
-
-//   segments.forEach((segment) => {
-//     const start = Number(segment.dataset.start);
-//     const duration = Number(segment.dataset.duration || 0);
-//     const end = start + duration;
-
-//     //  the segment starts before the note ends and the segment ends after the note starts.
-//     // Highlight every transcript segment overlapping the saved range.
-//     if (start < endTime && end > startTime) {
-//       // since its overlapping so we assign this a new class to highlight it
-//       segment.classList.add("saved-note-segment");
-
-//       // the segment overlaps the selected range so we check if we have already
-//       //  set firstHighlighted, if not we set it to this segment
-//       if (!firstHighlighted) {
-//         firstHighlighted = segment;
-//       }
-
-//       console.log({
-//         segmentStart: start,
-//         segmentEnd: end,
-//         overlaps: start < endTime && end > startTime,
-//       });
-//     } else {
-//       segment.classList.remove("saved-note-segment");
-//     }
-//   });
-
-//   if (firstHighlighted !== undefined) {
-//     firstHighlighted.scrollIntoView({
-//       behavior: "smooth",
-//       block: "center",
-//     });
-//   }
-// }
-
-
-function highlightSavedNote(
-  savedRanges: ActiveSavedNoteRange[],
-): void {
+function highlightSavedNote(savedRanges: ActiveSavedNoteRange[]): void {
   console.log("highlightSavedNote called:", savedRanges.length, "notes");
 
   const container = document.getElementById("transcript-container");
@@ -435,10 +511,11 @@ function highlightSavedNote(
 
   let firstHighlighted: HTMLElement | undefined;
 
-  // Process every saved note.
+  // 1. Process every saved note's details
   savedRanges.forEach((preciseRange) => {
     const startSegment = segments.find(
       (segment) =>
+        // the segment whose starting time stamp is same as the saved note's starting timestamp is the first segment
         Number(segment.dataset.start) === preciseRange.startSegmentStart,
     );
 
@@ -450,6 +527,7 @@ function highlightSavedNote(
     let exactRangeCreated = false;
 
     if (startSegment && endSegment) {
+      // found segment now find their child text node who actucally contain the text
       const startTextNode = startSegment.firstChild;
       const endTextNode = endSegment.firstChild;
 
@@ -469,11 +547,16 @@ function highlightSavedNote(
           preciseRange.endOffset <= endLength;
 
         if (validOffsets) {
+
+          // 2. create the browser range for that note details
           const range = document.createRange();
 
+          // where the selection begings
           range.setStart(startTextNode, preciseRange.startOffset);
           range.setEnd(endTextNode, preciseRange.endOffset);
 
+
+          // 3. Store the browser range
           domRanges.push(range);
           exactRangeCreated = true;
 
@@ -506,6 +589,8 @@ function highlightSavedNote(
   const HighlightClass = (window as any).Highlight;
 
   if (css.highlights && HighlightClass && domRanges.length > 0) {
+
+    // 4. Register the DOM ranges with the hughlight API so it can aplly the below css class
     const highlight = new HighlightClass(...domRanges);
 
     css.highlights.set("saved-note-highlight", highlight);
@@ -528,9 +613,7 @@ function highlightSavedNote(
       const startTime = Number(
         (startSegment as HTMLElement | null)?.dataset.start,
       );
-      const endTime = Number(
-        (endSegment as HTMLElement | null)?.dataset.start,
-      );
+      const endTime = Number((endSegment as HTMLElement | null)?.dataset.start);
 
       const matchingRange = savedRanges.find(
         (item) =>
@@ -559,44 +642,143 @@ function highlightSavedNote(
   }
 }
 
+// function restorePendingNoteHighlight(): void {
+//   chrome.runtime.sendMessage({ type: "GET_SAVED_NOTE_RANGE" }, (response) => {
+//     if (chrome.runtime.lastError) {
+//       console.error(
+//         "Could not retrieve saved note range:",
+//         chrome.runtime.lastError.message,
+//       );
 
+//       if (activeSavedNoteRanges.length > 0) {
+//         highlightSavedNote(activeSavedNoteRanges);
+//       }
+
+//       return;
+//     }
+
+//     // A specific saved note was opened in a new tab.
+//     if (response?.success && response.data) {
+//       activeSavedNoteRanges = [
+//         {
+//           startTime: response.data.startTime,
+//           endTime: response.data.endTime,
+//           startSegmentStart: response.data.startSegmentStart,
+//           endSegmentStart: response.data.endSegmentStart,
+//           startOffset: response.data.startOffset,
+//           endOffset: response.data.endOffset,
+//         },
+//       ];
+
+//       highlightSavedNote(activeSavedNoteRanges);
+//       return;
+//     }
+
+//     // No new pending note. Restore all ranges already active on this page.
+//     if (activeSavedNoteRanges.length > 0) {
+//       highlightSavedNote(activeSavedNoteRanges);
+//     }
+//   });
+// }
+
+// this function will execute when we display the transcript 
 function restorePendingNoteHighlight(): void {
-  chrome.runtime.sendMessage({ type: "GET_SAVED_NOTE_RANGE" }, (response) => {
-    if (chrome.runtime.lastError) {
-      console.error(
-        "Could not retrieve saved note range:",
-        chrome.runtime.lastError.message,
-      );
 
-      if (activeSavedNoteRanges.length > 0) {
-        highlightSavedNote(activeSavedNoteRanges);
+  // 1 . take the video id
+  const videoId = new URL(window.location.href).searchParams.get("v");
+
+  if (!videoId) return;
+
+
+  // 2. First, fetch all notes belonging to the signed-in user from Supabase.
+  chrome.runtime.sendMessage(
+    { type: "GET_SAVED_NOTES" },
+    (notesResponse?: NotesResponse<SavedNote[]>) => {
+      if (chrome.runtime.lastError || !notesResponse?.success) {
+        const responseError =
+          notesResponse && !notesResponse.success
+            ? notesResponse.error
+            : undefined;
+        console.error(
+          "Could not retrieve saved notes:",
+          chrome.runtime.lastError?.message ?? responseError,
+        );
+        return;
       }
 
-      return;
-    }
+      // Keep only notes belonging to the currently opened video in videonotes array
+      const videoNotes = (notesResponse.data ?? []).filter(
+        (note) => note.videoId === videoId,
+      );
 
-    // A specific saved note was opened in a new tab.
-    if (response?.success && response.data) {
-      activeSavedNoteRanges = [
-        {
-          startTime: response.data.startTime,
-          endTime: response.data.endTime,
-          startSegmentStart: response.data.startSegmentStart,
-          endSegmentStart: response.data.endSegmentStart,
-          startOffset: response.data.startOffset,
-          endOffset: response.data.endOffset,
+      // Convert every saved note into the format used by the
+      // existing multi-highlight function. 
+      // from each not got from supabase make activesavednotesrange to pass the data needed to highlight the notes
+      activeSavedNoteRanges = videoNotes.map((note) => ({
+        startTime: note.startTime,
+        endTime: note.endTime,
+        startSegmentStart: note.startSegmentStart,
+        endSegmentStart: note.endSegmentStart,
+        startOffset: note.startOffset,
+        endOffset: note.endOffset,
+      }));
+
+      // Keep the existing popup-to-video navigation flow.
+      // This also lets us prioritize the note the user clicked.
+      chrome.runtime.sendMessage(
+        { type: "GET_SAVED_NOTE_RANGE" },
+        (pendingResponse) => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "Could not retrieve pending note range:",
+              chrome.runtime.lastError.message,
+            );
+
+            // response received successfully convert the data into the format needed to highlight
+          } else if (pendingResponse?.success && pendingResponse.data) {
+            const pendingRange = {
+              startTime: pendingResponse.data.startTime,
+              endTime: pendingResponse.data.endTime,
+              startSegmentStart: pendingResponse.data.startSegmentStart,
+              endSegmentStart: pendingResponse.data.endSegmentStart,
+              startOffset: pendingResponse.data.startOffset,
+              endOffset: pendingResponse.data.endOffset,
+            };
+
+            // Check whether this note is already in the Supabase results.
+            // now we have all the notes from the supabase we are finding the index of the note whose data is same as that of the note clicked which is basically the pending note range here 
+
+            const existingIndex = activeSavedNoteRanges.findIndex(
+              (range) =>
+                range.startSegmentStart === pendingRange.startSegmentStart &&
+                range.endSegmentStart === pendingRange.endSegmentStart &&
+                range.startOffset === pendingRange.startOffset &&
+                range.endOffset === pendingRange.endOffset,
+            );
+
+            // Avoid adding the same note twice.
+            if (existingIndex !== -1) {
+              // removed the selected note that was already in supabase and returns it 
+              const [selectedRange] = activeSavedNoteRanges.splice(existingIndex,1,);
+              // we shift that new note to the starting position
+              activeSavedNoteRanges.unshift(selectedRange);
+            } else {
+
+              // if the note is not in the supabase we just push it to the start of the active range
+              activeSavedNoteRanges.unshift(pendingRange);
+            }
+          }
+
+          // now we have all the notes so just apply the styles and then apply the highlight on them together
+          // Apply all notes together, not just the selected one.
+          if (activeSavedNoteRanges.length > 0) {
+            addSavedNoteStyles();
+            highlightSavedNote(activeSavedNoteRanges);
+          }
         },
-      ];
-
-      highlightSavedNote(activeSavedNoteRanges);
-      return;
-    }
-
-    // No new pending note. Restore all ranges already active on this page.
-    if (activeSavedNoteRanges.length > 0) {
-      highlightSavedNote(activeSavedNoteRanges);
-    }
-  });
+      );
+    },
+  );
 }
 
 function getVideoTitle(): string {

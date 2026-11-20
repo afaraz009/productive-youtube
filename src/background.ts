@@ -93,7 +93,9 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true;
   }
 
-  if (request.type === "HECK_PENDING_SAVED_NOTE") {
+  // This call was used because we wanted to show the note being highlighted in the transcript even though it was not enabled
+  // so we checked in index.ts that whats the current setting and whether the tab was opened with some pending note if yes it does not clear the transcript
+  if (request.type === "CHECK_PENDING_SAVED_NOTE") {
     checkPendingSavedNote(_sender)
       .then(sendResponse)
       .catch((error) => {

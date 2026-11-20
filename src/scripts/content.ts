@@ -172,6 +172,8 @@ function handleYouTubeNavigation(): void {
     // Only show transcript if video changed or first load
     if (currentVideoId && currentVideoId !== lastVideoId) {
       lastVideoId = currentVideoId;
+
+      // so the previous's notes range does not highlight this page and the var is now null 
       clearActiveSavedNoteRange();
 
       // Give YouTube more time to render the page on SPA navigation
