@@ -13,6 +13,8 @@ import type { SavedNote } from "./scripts/types";
 //immediately initializes when background.ts loads and registers a listener with supabase
 registerAuthBroadcast();
 // this listener waits for messages from other parts of my extention
+
+//display...notes1
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (isNotesRequest(request)) {
     if (_sender.id !== chrome.runtime.id) return false;
@@ -104,12 +106,14 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 }
 });
 
+//notes2...
 async function handleNotesRequest(
 request: NotesRequest,
 ): Promise<NotesResponse<SavedNote | SavedNote[] | null>> {
 try {
   switch (request.type) {
     case "SAVE_NOTE":
+      //notes3....
       return { success: true, data: await saveNote(request.note) };
     case "GET_SAVED_NOTES":
       return { success: true, data: await getSavedNotes() };

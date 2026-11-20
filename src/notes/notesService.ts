@@ -4,6 +4,7 @@ import type { Database } from "./database.types";
 
 type NoteRow = Database["public"]["Tables"]["notes"]["Row"];
 
+//notes5...
 function toNoteRow(note: SavedNote, userId: string): NoteRow {
   return {
     id: note.id,
@@ -37,6 +38,7 @@ function toSavedNote(row: NoteRow): SavedNote {
   };
 }
 
+//when user tries to save the note but isnt logged in
 async function requireUserId(): Promise<string> {
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
@@ -46,6 +48,7 @@ async function requireUserId(): Promise<string> {
   return data.session.user.id;
 }
 
+//notes4.....
 export async function saveNote(note: SavedNote): Promise<SavedNote> {
   const userId = await requireUserId();
   const { data, error } = await supabase

@@ -268,6 +268,7 @@ function setupTranscriptNoteSaving(): void {
     event.preventDefault();
   });
 
+  //notes1.....
   button.addEventListener("click", () => {
     if (!selectedRange) return;
 

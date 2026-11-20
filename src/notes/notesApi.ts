@@ -20,6 +20,8 @@ function send<T>(request: NotesRequest): Promise<NotesResponse<T>> {
   });
 }
 
+
+//currently unused
 export const saveNote = (note: SavedNote) =>
   send<SavedNote>({ type: "SAVE_NOTE", note });
 
