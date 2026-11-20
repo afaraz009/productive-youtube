@@ -36,68 +36,6 @@ type NoteSelection = {
   preview: string;
 };
 
-// function getSelectedTranscriptRange(): NoteSelection | null {
-//   // what text is currenty selected in the transcript container
-//   const selection = window.getSelection();
-//   const container = document.getElementById("transcript-container");
-
-//   // if nothing selected just return null
-//   if (!selection || selection.isCollapsed || !container) {
-//     return null;
-//   }
-
-//   // A Range object describes where a selection starts and ends in the DOM.
-
-//   // get the range of the selection
-//   const range = selection.getRangeAt(0);
-
-//   // Only allow selections completely inside our transcript.
-//   if (
-//     !container.contains(range.startContainer) ||
-//     !container.contains(range.endContainer)
-//   ) {
-//     return null;
-//   }
-
-//   const segments = Array.from(
-//     container.querySelectorAll<HTMLElement>(".transcript-segment"),
-//   );
-
-//   const selectedSegments = segments.filter((segment) => {
-//     try {
-//       return range.intersectsNode(segment);
-//     } catch {
-//       return false;
-//     }
-//   });
-
-//   if (selectedSegments.length === 0) {
-//     return null;
-//   }
-
-//   const firstSegment = selectedSegments[0];
-//   const lastSegment = selectedSegments[selectedSegments.length - 1];
-
-//   // dataset reads HTML attributes as strings so we need to convert them to numbers and check if they are valid numbers
-//   const startTime = Number(firstSegment.dataset.start);
-//   const lastStart = Number(lastSegment.dataset.start);
-//   const lastDuration = Number(lastSegment.dataset.duration || 0);
-
-//   if (
-//     !Number.isFinite(startTime) ||
-//     !Number.isFinite(lastStart) ||
-//     !Number.isFinite(lastDuration)
-//   ) {
-//     return null;
-//   }
-
-//   return {
-//     startTime,
-//     endTime: lastStart + lastDuration,
-//     preview: selection.toString().trim().slice(0, 100),
-//   };
-// }
-
 function getSelectedTranscriptRange(): NoteSelection | null {
   // The returned object is the browser selection object and it has information about
   // where selection starts and ends in DOM, the actual text selected, and whether the selection is collapsed (no text selected) or not.
@@ -643,46 +581,6 @@ function highlightSavedNote(savedRanges: ActiveSavedNoteRange[]): void {
   }
 }
 
-// function restorePendingNoteHighlight(): void {
-//   chrome.runtime.sendMessage({ type: "GET_SAVED_NOTE_RANGE" }, (response) => {
-//     if (chrome.runtime.lastError) {
-//       console.error(
-//         "Could not retrieve saved note range:",
-//         chrome.runtime.lastError.message,
-//       );
-
-//       if (activeSavedNoteRanges.length > 0) {
-//         highlightSavedNote(activeSavedNoteRanges);
-//       }
-
-//       return;
-//     }
-
-//     // A specific saved note was opened in a new tab.
-//     if (response?.success && response.data) {
-//       activeSavedNoteRanges = [
-//         {
-//           startTime: response.data.startTime,
-//           endTime: response.data.endTime,
-//           startSegmentStart: response.data.startSegmentStart,
-//           endSegmentStart: response.data.endSegmentStart,
-//           startOffset: response.data.startOffset,
-//           endOffset: response.data.endOffset,
-//         },
-//       ];
-
-//       highlightSavedNote(activeSavedNoteRanges);
-//       return;
-//     }
-
-//     // No new pending note. Restore all ranges already active on this page.
-//     if (activeSavedNoteRanges.length > 0) {
-//       highlightSavedNote(activeSavedNoteRanges);
-//     }
-//   });
-// }
-
-// this function will execute when we display the transcript 
 function restorePendingNoteHighlight(): void {
 
   // 1 . take the video id

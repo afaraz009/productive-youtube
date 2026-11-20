@@ -10,9 +10,10 @@ const defaultSettings: Settings = {
   removeComments: true,
 
   // AI Settings
-  aiService: 'chatgpt',
+  aiService: "chatgpt",
   aiPrompts: {
-    translate: "Translate the following transcript in urdu. Keep the timestamps and the same format in translated content",
+    translate:
+      "Translate the following transcript in urdu. Keep the timestamps and the same format in translated content",
     summarize: `# YouTube Video Summary Generator
 
 ## Instructions
@@ -48,23 +49,20 @@ If relevant, include brief sections on:
 - Key questions addressed or left unanswered
 
 Format all hyperlinks properly to ensure they are clickable and lead to the correct timestamp in the video.`,
-    vocabulary: "Find all difficult words and create a table of English to Urdu and English to English meaning"
-  }
-,
-
-
- // Focus Lock
-focusLockEnabled: false,
-focusLockUntil: 0,
-focusLockDurationMinutes: 25, // Default duration
-focusLockFeatures: [
-  "removeShorts",
-  "removeShortsButton",
-  "removeHomepageVideos",
-  "removeWatchPageSuggestions"
-],
-focusLockValues: {},
-
+    vocabulary:
+      "Find all difficult words and create a table of English to Urdu and English to English meaning",
+  },
+  // Focus Lock
+  focusLockEnabled: false,
+  focusLockUntil: 0,
+  focusLockDurationMinutes: 25, // Default duration
+  focusLockFeatures: [
+    "removeShorts",
+    "removeShortsButton",
+    "removeHomepageVideos",
+    "removeWatchPageSuggestions",
+  ],
+  focusLockValues: {},
 };
 
 // Current settings instance - exported as mutable object

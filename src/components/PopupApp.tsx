@@ -483,21 +483,39 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
         <div className="px-4 pt-3">
           <button
             onClick={() => setShowMyNotes(true)}
-            className="w-full rounded-lg border border-[#086972] px-4 py-2 text-sm font-medium text-[#086972]"
+            className="w-full flex items-center justify-between rounded-xl border border-[#cbded8] bg-white px-4 py-3 text-left shadow-sm hover:border-[#086972] hover:bg-[#f3f8f5] transition-all"
           >
-            My Notes ({savedNotes.length})
+            <div>
+              <p className="text-[13px] font-semibold text-[#263e40]">
+                My Notes
+              </p>
+              <p className="text-[10px] text-[#879493] mt-0.5">
+                Revisit your saved moments
+              </p>
+            </div>
+
+            <span className="rounded-full bg-[#e8f2ef] px-2.5 py-1 text-[11px] font-bold text-[#086972]">
+              {savedNotes.length}
+            </span>
           </button>
         </div>
 
         {/* My Notes screen */}
         {showMyNotes && (
-          <div className="absolute inset-0 z-50 overflow-y-auto bg-[#faf9f5] p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">My Notes</h2>
+          <div className="absolute inset-0 z-50 overflow-y-auto bg-[#faf9f5] dark:bg-slate-950 p-4">
+            <div className="flex items-center justify-between border-b border-[#e5ebe7] pb-4 mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-[#263e40] dark:text-slate-100 mt-1">
+                  My Notes
+                </h2>
+                <p className="text-[11px] text-[#879493] mt-0.5">
+                  {savedNotes.length} saved Notes
+                </p>
+              </div>
 
               <button
                 onClick={() => setShowMyNotes(false)}
-                className="text-sm font-medium text-[#086972]"
+                className="rounded-lg border border-[#cbded8] px-3 py-2 text-xs font-semibold text-[#086972] hover:bg-[#e8f2ef] transition-colors"
               >
                 Back
               </button>
@@ -540,20 +558,28 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
               map works on array but here groupedNotes is an object with videoId as keys and array of notes as values,
               and so we use Object.entries() to convert it to an array of key-value pairs so now each element is a [videoId, notes] pair with notes being the array of notes for that video having that videoId , videotitle, starting and ending times, preview and createdAt */}
                 {Object.entries(groupedNotes).map(([videoId, notes]) => (
-                  <div key={videoId} className="border-b border-gray-200 pb-3">
+                  <div
+                    key={videoId}
+                    className="rounded-xl border border-[#e5ebe7] bg-white p-3 shadow-sm dark:bg-slate-900 dark:border-slate-700"
+                  >
                     <button
                       onClick={() => openSavedVideo(videoId)}
-                      className="mb-2 text-left text-sm font-semibold text-gray-900 hover:text-[#086972] hover:underline transition-colors"
+                      className="w-full flex items-start justify-between gap-2 mb-3 text-left group"
                       title="Open video"
                     >
-                      {notes[0].videoTitle}
-                    </button>
+                      <span className="min-w-0 text-[13px] font-bold leading-snug text-[#263e40] group-hover:text-[#086972] dark:text-slate-100 transition-colors">
+                        {notes[0].videoTitle}
+                      </span>
 
+                      <span className="shrink-0 rounded-full bg-[#e8f2ef] px-2 py-1 text-[10px] font-semibold text-[#086972]">
+                        {notes.length} {notes.length === 1 ? "note" : "notes"}
+                      </span>
+                    </button>
                     <div className="space-y-2">
                       {notes.map((note) => (
                         <div
                           key={note.id}
-                          className="flex items-start gap-2 rounded-lg border border-gray-200 bg-white p-3"
+                          className="flex items-start gap-2 rounded-lg border border-[#edf0ed] bg-[#fafbf9] p-3 hover:border-[#b9d4cb] transition-colors dark:bg-slate-800 dark:border-slate-700"
                         >
                           <button
                             onClick={() => openSavedNote(note)}
@@ -564,7 +590,15 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
                               {formatNoteTimestamp(note.endTime)}
                             </p>
 
-                            <p className="mt-1 break-words text-sm text-gray-700">
+                            <p
+                              title={note.preview}
+                              className="mt-1.5 text-[12px] leading-relaxed text-[#536566] dark:text-slate-300 overflow-hidden"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                              }}
+                            >
                               {note.preview}
                             </p>
                           </button>
@@ -572,7 +606,7 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
                           <button
                             onClick={() => deleteSavedNote(note.id)}
                             title="Delete note"
-                            className="shrink-0 px-2 py-1 text-xs text-red-600"
+                            className="shrink-0 rounded-md px-2 py-1.5 text-[10px] font-medium text-[#a66b62] hover:bg-red-50 hover:text-red-700 transition-colors dark:hover:bg-red-950/30"
                           >
                             Delete
                           </button>
