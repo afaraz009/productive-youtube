@@ -13,6 +13,7 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+
 export function isSavedNote(value: unknown): value is SavedNote {
   if (!value || typeof value !== "object") return false;
 
@@ -31,6 +32,10 @@ export function isSavedNote(value: unknown): value is SavedNote {
     Number.isSafeInteger(note.createdAt)
   );
 }
+
+
+
+
 
 export function isNotesRequest(value: unknown): value is NotesRequest {
   if (!value || typeof value !== "object") return false;
