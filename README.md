@@ -132,3 +132,6 @@ The production build optimizes the code for size and performance:
 ## Extension Loading
 
 After building, load the extension from the `dist/` folder in Chrome's extension management page with developer mode enabled.
+
+## Database changes
+Schema changes go through migration files and CI/CD. See [docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md) before changing any table.
