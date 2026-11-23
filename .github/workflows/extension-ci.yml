@@ -41,11 +41,9 @@ jobs:
         run: npm ci
 
       # Full TypeScript check (Vite alone only strips types, it does not check them).
-      # TEMPORARY: continue-on-error lets the job pass while the existing type errors
-      # are being fixed. The errors are still printed in this step's log.
-      # TODO: delete the next line once `npm run typecheck` passes locally.
+      
       - name: Type-check
-        continue-on-error: true
+      #continue-on-error: true
         run: npm run typecheck
 
       - name: Build the extension
