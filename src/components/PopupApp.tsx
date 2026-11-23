@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import HighlightsView from "./HighlightsView";
 
 type AIService = 'chatgpt' | 'gemini' | 'claude' | 'grok';
 
@@ -127,7 +128,7 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
   };
 
   const [settings, setSettings] = useState<Settings>(defaultSettings);
-
+  const [activeView, setActiveView] = useState("settings");
 
   // result = settings retrieved from Chrome storage.
   // defaultSettings = fallback settings defined by your application.
@@ -176,6 +177,7 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
   };
 
   const [showApiKey, setShowApiKey] = useState(false);
+  
 
   // AI Service handler
   const handleAIServiceChange = (value: AIService) => {
@@ -197,10 +199,13 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
       chrome.storage.local.set({ aiPrompts: newPrompts });
     }
   };
+  
 
   const [showAISettings, setShowAISettings] = useState(false);
 
   return (
+    
+    activeView === "settings" ? (
     <div className="w-96 max-h-[600px] pb-5 overflow-y-auto font-sans text-sm bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-slate-950">
       <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-900 border-b border-blue-800 dark:border-blue-950 px-4 py-3.5 shadow-md">
         <h1 className="text-sm font-bold text-white">Productive YouTube</h1>
@@ -252,15 +257,15 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
           checked={settings.thumbnailSummary}
           onChange={(val) => handleToggle("thumbnailSummary", val)}
         />
-        <ToggleSwitch
+        {/* <ToggleSwitch
           id="article-toggle" 
           label="Article Posts"
           description="Show article posts on the homepage"
           checked={settings.showArticlePosts}
           onChange={(val) => handleToggle("showArticlePosts", val)}
-        />
+        /> */}
 
-        {settings.thumbnailSummary && (
+        {/* {settings.thumbnailSummary && (
           <div className="mt-1 mb-2 p-3 space-y-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/50">
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -325,7 +330,18 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
               </select>
             </div>
           </div>
-        )}
+        )} */}
+      </div>
+
+      {/* My Saved Highlights: opens the saved transcript highlights view */}
+      <div className="px-4 pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveView("saved-highlights")}
+          className="w-full px-3 py-2 text-xs font-medium text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
+        >
+          My Saved Highlights
+        </button>
       </div>
 
       {/* AI Settings Section */}
@@ -422,6 +438,9 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
         Version 2.0.3 • Built for focus 💙
       </div>
     </div>
+    ) : (
+      <HighlightsView setActiveView={setActiveView} />
+    )
   );
 };
 

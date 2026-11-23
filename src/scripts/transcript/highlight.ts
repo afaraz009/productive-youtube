@@ -214,7 +214,7 @@ async function saveHighlight(): Promise<void> {
   const start = toPoint(range.startContainer, range.startOffset);
   const end = toPoint(range.endContainer, range.endOffset);
   if (!start || !end) return; // starts or ends outside a caption line
-
+  // ": SavedHighlight" -> this object must have exactly the shape of a SavedHighlight
   const highlight: SavedHighlight = {
     id: crypto.randomUUID(),
     start,
@@ -270,9 +270,12 @@ export async function retrieveSelectionHighlight(content: HTMLElement): Promise<
 // refresh). So each end is saved as { key: line's data-start, offset: chars into line }.
 
 // (node, offset) inside the panel → { key, offset } inside a caption line
+// key -> starting/ending timestamps
 function toPoint(node: Node, offset: number): Point | null {
+  //take it if it is an Element otherwise (if #text node) take its parent cz only elements have closest()
   const element = node instanceof Element ? node : node.parentElement;
   const line = element?.closest<HTMLElement>(LINE_SELECTOR);
+  // dataset.start -> data-start
   const key = line?.dataset.start;
   if (!line || !key) return null;
 
@@ -325,7 +328,9 @@ function drawHighlight(range: Range, id: string): void {
   //    wrapping changes the DOM, and the range moves with it
   const pieces = textNodes.map((node) => ({
     node,
+    //Is this the starting node? Use the Range’s start offset. Otherwise, start at 0 of this text note because the highlight began in an earlier node.
     start: node === range.startContainer ? range.startOffset : 0,
+    //Is this the ending node? Use the Range’s end offset. Otherwise, continue to the end of this node (node.length).
     end: node === range.endContainer ? range.endOffset : node.length,
   }));
 

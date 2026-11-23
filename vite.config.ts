@@ -6,10 +6,14 @@ export default defineConfig({
   base: "./",
   build: {
     outDir: "dist",
+    // don't delete dist/ on each build: content_script.js comes from the other build
+    // (vite.content.config.ts). `npm run build` clears dist/ itself first.
+    emptyOutDir: false,
     rollupOptions: {
+      // the content script is NOT here: it's built on its own by vite.content.config.ts
+      // (built together with the popup, shared code would be split out into an import it can't load)
       input: {
         popup: "src/popup.html",
-        content: "src/scripts/content.ts",
         background: "src/background.ts",
         chatgpt_automation: "src/scripts/chatgpt-automation.ts",
         gemini_automation: "src/scripts/gemini-automation.ts",
@@ -18,9 +22,6 @@ export default defineConfig({
       },
       output: {
         entryFileNames: (chunkInfo) => {
-          if (chunkInfo.name === "content") {
-            return "content_script.js";
-          }
           if (chunkInfo.name === "background") {
             return "background.js";
           }

@@ -22,6 +22,26 @@ export async function getHighlights(videoId: string): Promise<SavedHighlight[]> 
   return stored[key] ?? [];
 }
 
+// a saved highlight + the video it belongs to (taken from its storage key)
+export type HighlightWithVideo = SavedHighlight & { videoId: string };
+
+// every saved highlight of every video, each one tagged with its videoId
+//   { "highlights_abc": [h1, h2], "highlights_xyz": [h3] }
+//   → [ {...h1, videoId: "abc"}, {...h2, videoId: "abc"}, {...h3, videoId: "xyz"} ]
+export async function getAllHighlights(): Promise<HighlightWithVideo[]> {
+  const result = await chrome.storage.local.get(null); // null = everything in storage
+  return Object.entries(result)
+    .filter(([key]) => key.startsWith("highlights_")) // only the highlight lists, not the settings
+    //flatMap joins the per-video arrays into one list:
+    //without flat you’d get an array of arrays, one inner array per video
+    //flatMap() internally performs map() first, then flat(1).
+    .flatMap(([key, value]) => {
+      const videoId = key.slice("highlights_".length); // "highlights_abc" → "abc"
+      const highlights = Array.isArray(value) ? (value as SavedHighlight[]) : [];
+      return highlights.map((highlight) => ({ ...highlight, videoId }));
+    });
+}
+
 // read this video's list → add one → write back
 export async function addHighlight(videoId: string, highlight: SavedHighlight): Promise<void> {
   const highlights = await getHighlights(videoId);
