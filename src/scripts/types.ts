@@ -21,7 +21,6 @@ export interface Settings {
   removeWatchPageSuggestions: boolean;
   showTranscript: boolean;
   thumbnailSummary: boolean;
-  showArticlePosts: boolean;
   // AI Settings
   aiService: AIService;
   aiPrompts: AIPrompts;

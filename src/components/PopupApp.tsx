@@ -17,7 +17,6 @@ interface Settings {
   removeWatchPageSuggestions: boolean;
   showTranscript: boolean;
   thumbnailSummary: boolean;
-  showArticlePosts: boolean;
   huggingfaceApiKey?: string;
 
   // Thumbnail TL;DR (read by background.ts, never by the content script)
@@ -79,7 +78,6 @@ const PopupApp: React.FC = () => {
     removeWatchPageSuggestions: true,
     showTranscript: false,
     thumbnailSummary: true,
-    showArticlePosts: true,
     huggingfaceApiKey: "",
     geminiApiKey: "",
     geminiModel: "gemini-3.5-flash-lite",
@@ -257,14 +255,6 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
           checked={settings.thumbnailSummary}
           onChange={(val) => handleToggle("thumbnailSummary", val)}
         />
-        {/* <ToggleSwitch
-          id="article-toggle" 
-          label="Article Posts"
-          description="Show article posts on the homepage"
-          checked={settings.showArticlePosts}
-          onChange={(val) => handleToggle("showArticlePosts", val)}
-        /> */}
-
         {/* {settings.thumbnailSummary && (
           <div className="mt-1 mb-2 p-3 space-y-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/50">
             <div>

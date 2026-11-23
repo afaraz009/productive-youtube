@@ -21,7 +21,6 @@ import {
   closeAllSummaryCards,
 } from "./thumbnailSummary";
 
-import { initArticlePosts } from "./articlePosts";
 // Track last video ID to detect video changes during SPA navigation
 let lastVideoId: string | null = null;
 
@@ -34,9 +33,6 @@ function initializeFullExtension(): void {
 
     // Hover listeners for the thumbnail TL;DR (they check the setting on every hover)
     initThumbnailSummary();
-
-    // Initialize article posts feature
-    initArticlePosts();
 
     // Create observer for dynamic content
     //MutationObserver -> watch for changes being made to the DOM tree
@@ -95,7 +91,6 @@ function applyAllRemovals(): void {
     removeVideoSuggestions(); // Always call - function handles restore internally
   } else if (isHomePage()) {
     removeHomepageVideos();
-    // applyArticlePostsSetting();
 
   }
 }

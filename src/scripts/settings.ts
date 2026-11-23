@@ -8,7 +8,6 @@ const defaultSettings: Settings = {
   removeWatchPageSuggestions: true,
   showTranscript: false,
   thumbnailSummary: true,
-  showArticlePosts: false,
   // AI Settings
   aiService: 'chatgpt',
   aiPrompts: {

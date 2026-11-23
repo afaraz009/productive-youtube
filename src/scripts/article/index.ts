@@ -5,14 +5,6 @@ import { fetchVideoTranscriptText } from "../thumbnailSummary/transcript";
 
 
 
-// function to place the article posts button
-export function placeArticlePostsButton() {
-  if (!settings.showArticlePosts) return;
-  // Implementation for placing the button
-  // ...
-}
-
-    
 //Load the summary. First use cached summary if available. If not, it fetches the video transcript and generates a new summary using Gemini. The function handles errors and updates the card's UI accordingly.
 export async function loadSummary(card: SummaryCard, force: boolean): Promise<void> {
   try {
