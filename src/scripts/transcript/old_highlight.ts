@@ -4,16 +4,45 @@ import { getVideoId } from "./utils";
 // Only the first N characters of a highlight's text are saved: enough to check on
 // restore that we found the same words, without storing whole paragraphs.
 const TEXT_PREFIX_LENGTH = 40;
+let selectionHighlightListeners: AbortController | undefined;
 
 export function setupSelectionHighlight(content: HTMLElement): void {
-  const tooltip = createTooltip();
-  document.body.appendChild(tooltip);
+  selectionHighlightListeners?.abort();
+  selectionHighlightListeners = new AbortController();
+  const { signal } = selectionHighlightListeners;
+
+  let tooltip = document.getElementById("transcript-tooltip");
+  if (!tooltip) {
+    tooltip = createTooltip();
+    document.body.appendChild(tooltip);
+    tooltip.addEventListener("mousedown", (e) => handleHighlightPress (e, tooltip!));
+
+  }
+  
+  let selectionChanged = false;
+  
+  document.addEventListener("selectionchange", () => {
+    selectionChanged = true;
+  }, { signal });
+  
+  document.addEventListener("mousedown", () => {
+      tooltip.style.display = "none";
+      selectionChanged = false;
+    }, { signal });
+  document.addEventListener("scroll", () => {
+      tooltip.style.display = "none";
+      selectionChanged = false;
+    }, { signal });
+  content.addEventListener("scroll", () => {
+      tooltip.style.display = "none";
+      selectionChanged = false;
+    }, { signal });
 
   content.addEventListener("mouseup", () => {
     //get highlighted text
     const selection = window.getSelection();
 
-    if (!selection || selection.isCollapsed || !selection.toString().trim() || !selection.rangeCount) {
+    if (!selection || selection.isCollapsed || !selection.toString().trim() || !selection.rangeCount || !selectionChanged) {
       tooltip.style.display = "none";
       return;
     }
@@ -31,53 +60,56 @@ export function setupSelectionHighlight(content: HTMLElement): void {
     tooltip.style.top = `${rect.top - 40}px`;
     tooltip.style.left = `${rect.left + rect.width / 2}px`;
     tooltip.style.display = "block";
-  });
+  }, { signal });
 
-  tooltip.addEventListener("mousedown", async (e) => {
-    e.preventDefault();
-
-    const selection = window.getSelection();
-    //range count -> count of highlighted segments
-    if (!selection?.rangeCount) {
-      tooltip.style.display = "none";
-      return;
-    }
-
-    const range = selection.getRangeAt(0);
-    // read both ends BEFORE the DOM changes (wrapping splits text nodes)
-    const item = getDataToSaveHighlight(range);
-
-    // show the highlight right away, then save it
-    const marks = wrapRange(range);
-    selection.removeAllRanges();
-    tooltip.style.display = "none";
-
-    // nothing to save if we can't tell the video or where the selection starts/ends
-    if (!item.videoId || !item.start.key || !item.end.key) return;
-
-    const key = `highlights_${item.videoId}`;
-    try {
-      //get all the highlights of this video
-      const stored = await chrome.storage.local.get(key); //read
-      //if there aren’t any yet, start with an empty list.
-      const list = stored[key] ?? [];
-      list.push(item); //update
-      await chrome.storage.local.set({ [key]: list }); //store
-      // console.log("list: ",list)
-    } catch (err) {
-      // e.g. storage quota exceeded, or "Extension context invalidated" after an
-      // extension reload: the highlight wasn't saved, so don't leave it on screen
-      console.warn("[highlight] could not save highlight:", err);
-      unwrapMarks(marks);
-    }
-  });
 }
+
+async function handleHighlightPress (e: MouseEvent, tooltip: HTMLElement): Promise<void> {
+  e.preventDefault();
+
+  const selection = window.getSelection();
+  //range count -> count of highlighted segments
+  if (!selection?.rangeCount) {
+    tooltip.style.display = "none";
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+  // read both ends BEFORE the DOM changes (wrapping splits text nodes)
+  const item = getDataToSaveHighlight(range);
+
+  // show the highlight right away, then save it
+  const marks = wrapRange(range);
+  selection.removeAllRanges();
+  tooltip.style.display = "none";
+
+  // nothing to save if we can't tell the video or where the selection starts/ends
+  if (!item.videoId || !item.start.key || !item.end.key) return;
+
+  const key = `highlights_${item.videoId}`;
+  try {
+    //get all the highlights of this video
+    const stored = await chrome.storage.local.get(key); //read
+    //if there aren’t any yet, start with an empty list.
+    const list = stored[key] ?? [];
+    list.push(item); //update
+    await chrome.storage.local.set({ [key]: list }); //store
+    // console.log("list: ",list)
+  } catch (err) {
+    // e.g. storage quota exceeded, or "Extension context invalidated" after an
+    // extension reload: the highlight wasn't saved, so don't leave it on screen
+    console.warn("[highlight] could not save highlight:", err);
+    unwrapMarks(marks);
+  }
+}
+
 
 function createTooltip(): HTMLElement {
   const div = document.createElement("div");
   const button = document.createElement("button");
   button.type = "button";
   button.textContent = "Highlight";
+  div.id="transcript-tooltip";
   div.appendChild(button);
   div.style.display = "none";
   return div;
@@ -100,7 +132,7 @@ export function getDataToSaveHighlight(range: Range): SavedHighlight {
     start: toSpanPosition(range.startContainer, range.startOffset),
     end: toSpanPosition(range.endContainer, range.endOffset),
     // cleaned the same way as on restore, then cut to a short prefix
-    text: normalize(range.toString()).slice(0, TEXT_PREFIX_LENGTH),
+    text: normalize(range.toString()).slice(0, TEXT_PREFIX_LENGTH), //slice(start, characters count from start)
   };
 
   return item;
@@ -239,19 +271,17 @@ function wrapRange(range: Range): HTMLElement[] {
     piece.surroundContents(mark);
     marks.push(mark);
   }
-  // returned so the caller can undo the highlight (see unwrapMarks)
+  // returned so the caller can undo them (see unwrapMarks)
   return marks;
 }
 
-// Undoes wrapRange: puts each <mark>'s text back in its place and removes the <mark>.
-// normalize() on the parent merges the split text nodes back into one.
+// Undo wrapRange: put each <mark>'s text back in its place, then merge the
+// split text nodes back together so the span looks like it never had a mark.
 function unwrapMarks(marks: HTMLElement[]): void {
   for (const mark of marks) {
     const parent = mark.parentNode;
-    if (!parent) continue;
-    while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
-    parent.removeChild(mark);
-    parent.normalize();
+    mark.replaceWith(...mark.childNodes);
+    parent?.normalize();
   }
 }
 // Cleans up whitespaces to prevent spacing differences from causing comparison mismatches.

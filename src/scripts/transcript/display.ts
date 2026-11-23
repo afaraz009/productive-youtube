@@ -892,6 +892,12 @@ function createChunkParagraph(chunk: any): HTMLElement {
     `;
     // Add click event to seek video to the start time of the line
     span.onclick = () => {
+      const selection = window.getSelection();
+
+      // Ignore click if text is selected
+      if (selection && selection.toString().trim() !== "") {
+          return;
+      }
       const video = document.querySelector("video");
       if (video) {
         video.currentTime = lineData.start;

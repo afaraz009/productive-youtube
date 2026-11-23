@@ -238,7 +238,6 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
           checked={settings.removeWatchPageSuggestions}
           onChange={(val) => handleToggle("removeWatchPageSuggestions", val)}
         />
-        //-------------------------------------------------------------------------------------------------------
         <ToggleSwitch
           id="transcript-toggle"
           label="Show Video Transcript"
@@ -246,7 +245,6 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
           checked={settings.showTranscript}
           onChange={(val) => handleToggle("showTranscript", val)}
         />
-        //-------------------------------------------------------------------------------------------------------
         <ToggleSwitch
           id="thumbnail-summary-toggle" 
           label="Thumbnail TL;DR"

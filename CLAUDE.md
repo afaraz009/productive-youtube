@@ -227,7 +227,14 @@ showVideoTranscript()
 -   **No Circular Dependencies**: The module structure prevents circular imports.
 -   **Throttling**: All DOM manipulation uses throttled functions to avoid performance issues.
 
-## 10. Documentation
+## 10. Engineering rules
+
+- Priotize the simple implementations that satisfy the current requirement.
+- Do not overcomplicate or over-optimize the code/performance unless there is a measured problem. Prioritize simplicity and readability.
+- Do not add abstractions, interfaces, factories, helpers, config options, or future-proofing unless they are needed now.
+- Prefer direct, understandable code (with which the projects remains quick and easy to scale rather then slow progress with premature optimization) over a code that is too much Overly-abstracted and Overly-modularized i,e. unnecessary abstractions so that i can Avoid jumping across multiple functions to understand one operation
+
+## 11. Documentation
 
 -   **REFACTORING_SUMMARY.md**: Detailed guide on the refactoring from monolithic to modular
 -   **MODULE_STRUCTURE.md**: Visual diagrams and dependency graphs
