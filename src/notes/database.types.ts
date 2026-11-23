@@ -9,7 +9,6 @@ export interface Database {
           video_title: string;
           start_time: number;
           end_time: number;
-          start_segment_start: number;
           end_segment_start: number;
           start_offset: number;
           end_offset: number;
@@ -23,7 +22,6 @@ export interface Database {
           video_title: string;
           start_time: number;
           end_time: number;
-          start_segment_start: number;
           end_segment_start: number;
           start_offset: number;
           end_offset: number;
@@ -37,7 +35,6 @@ export interface Database {
           video_title?: string;
           start_time?: number;
           end_time?: number;
-          start_segment_start?: number;
           end_segment_start?: number;
           start_offset?: number;
           end_offset?: number;

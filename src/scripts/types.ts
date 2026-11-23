@@ -59,7 +59,6 @@ export type SavedNote = {
   videoTitle: string;
   startTime: number;
   endTime: number;
-  startSegmentStart: number;
   endSegmentStart: number;
   startOffset: number;
   endOffset: number;

@@ -73,7 +73,6 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       request.videoId,
       request.startTime,
       request.endTime,
-      request.startSegmentStart,
       request.endSegmentStart,
       request.startOffset,
       request.endOffset,
@@ -131,6 +130,7 @@ try {
 }
 }
 
+// this function tells us that if the note was opened via clicking in popup so if it has value in local storage against that tab id means openedbyclick so it will return true and hence in show transcript even if setting is off this being temp on will show the transcript and will not disturb the setting
 async function checkPendingSavedNote(sender: chrome.runtime.MessageSender) {
   const tabId = sender.tab?.id;
 
@@ -147,6 +147,7 @@ async function checkPendingSavedNote(sender: chrome.runtime.MessageSender) {
     isPending: !!result[storageKey],
   };
 }
+
 
 // this function is called when the content script sends a message to the background to get the saved note range for the newly opened tab
 async function handleGetSavedNoteRange(sender: chrome.runtime.MessageSender) {
@@ -175,7 +176,6 @@ async function handleSavedNoteOpen(
   videoId: string,
   startTime: number,
   endTime: number,
-  startSegmentStart: number,
   endSegmentStart: number,
   startOffset: number,
   endOffset: number,
@@ -198,7 +198,6 @@ async function handleSavedNoteOpen(
         [storageKey]: {
           startTime,
           endTime,
-          startSegmentStart,
           endSegmentStart,
           startOffset,
           endOffset,
