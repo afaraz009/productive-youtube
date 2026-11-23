@@ -24,7 +24,6 @@ export function isSavedNote(value: unknown): value is SavedNote {
     typeof note.videoTitle === "string" &&
     isFiniteNumber(note.startTime) &&
     isFiniteNumber(note.endTime) &&
-    isFiniteNumber(note.startSegmentStart) &&
     isFiniteNumber(note.endSegmentStart) &&
     Number.isInteger(note.startOffset) &&
     Number.isInteger(note.endOffset) &&

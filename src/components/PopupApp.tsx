@@ -320,7 +320,6 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
         endTime: note.endTime,
 
         // Information needed for exact-text highlighting
-        startSegmentStart: note.startSegmentStart,
         endSegmentStart: note.endSegmentStart,
         startOffset: note.startOffset,
         endOffset: note.endOffset,

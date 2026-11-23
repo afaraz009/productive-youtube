@@ -10,7 +10,6 @@ import type { SavedNote } from "../types";
 type ActiveSavedNoteRange = {
   startTime: number;
   endTime: number;
-  startSegmentStart: number;
   endSegmentStart: number;
   startOffset: number;
   endOffset: number;
@@ -29,7 +28,6 @@ const PENDING_NOTE_PREFIX = "pendingNoteNavigation_";
 type NoteSelection = {
   startTime: number;
   endTime: number;
-  startSegmentStart: number;
   endSegmentStart: number;
   startOffset: number;
   endOffset: number;
@@ -73,7 +71,7 @@ function getSelectedTranscriptRange(): NoteSelection | null {
   // Find which transcript segment contains the actual start/end
   // of the user's selection.
 
-  // here our job is to The span where the selection starts.
+  // here our job is to find The span where the selection starts.
   // The span where the selection ends.
   // The exact character position inside each span
   const startSegment =
@@ -103,14 +101,12 @@ function getSelectedTranscriptRange(): NoteSelection | null {
   const lastStart = Number(endSegment.dataset.start);
   const lastDuration = Number(endSegment.dataset.duration || 0);
 
-  const startSegmentStart = startTime;
   const endSegmentStart = lastStart;
 
   if (
     !Number.isFinite(startTime) ||
     !Number.isFinite(lastStart) ||
     !Number.isFinite(lastDuration) ||
-    !Number.isFinite(startSegmentStart) ||
     !Number.isFinite(endSegmentStart)
   ) {
     return null;
@@ -119,153 +115,12 @@ function getSelectedTranscriptRange(): NoteSelection | null {
   return {
     startTime,
     endTime: lastStart + lastDuration,
-    startSegmentStart,
     endSegmentStart,
     startOffset,
     endOffset,
     preview: selection.toString().trim().slice(0, 100),
   };
 }
-
-// function setupTranscriptNoteSaving(): void {
-//   if (document.getElementById("save-transcript-note-button")) {
-//     return;
-//   }
-
-//   const button = document.createElement("button");
-//   button.id = "save-transcript-note-button";
-//   button.textContent = "Save note";
-
-//   button.style.cssText = `
-//     position: fixed;
-//     display: none;
-//     z-index: 10000;
-//     padding: 8px 14px;
-//     border: none;
-//     border-radius: 6px;
-//     background: #086972;
-//     color: white;
-//     font-size: 13px;
-//     font-weight: 600;
-//     cursor: pointer;
-//     box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
-//   `;
-
-//   document.body.appendChild(button);
-
-//   let selectedRange: NoteSelection | null = null;
-
-//   document.addEventListener("mouseup", () => {
-//     // Allow the browser to finish updating the selection first.
-//     setTimeout(() => {
-//       const selection = getSelectedTranscriptRange();
-
-//       // if nothing is selected, hide the button
-//       if (!selection) {
-//         selectedRange = null;
-//         button.style.display = "none";
-//         return;
-//       }
-
-//       selectedRange = selection;
-
-//       const browserSelection = window.getSelection();
-//       if (!browserSelection || browserSelection.rangeCount === 0) {
-//         return;
-//       }
-
-//       // it helps us to set the position of the button to be near the selected text in the transcript container
-//       const rect = browserSelection.getRangeAt(0).getBoundingClientRect();
-
-//       button.style.left = `${Math.max(8, rect.left + rect.width / 2 - 45)}px`;
-//       button.style.top = `${Math.max(8, rect.top - 42)}px`;
-//       button.style.display = "block";
-//     }, 0);
-//   });
-
-//   button.addEventListener("mousedown", (event) => {
-//     // Prevent clicking the button from clearing the text selection before we
-//     // access it in the click handler. This is a workaround for the fact that clicking a button will clear the selection.
-//     event.preventDefault();
-//   });
-
-//   button.addEventListener("click", () => {
-//     if (!selectedRange) return;
-
-//     const videoId = new URL(window.location.href).searchParams.get("v");
-
-//     if (!videoId) {
-//       alert("Could not identify this video.");
-//       return;
-//     }
-
-//     const note = {
-//       id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-//       videoId,
-//       videoTitle: getVideoTitle(),
-//       startTime: selectedRange.startTime,
-//       endTime: selectedRange.endTime,
-
-//       startSegmentStart: selectedRange.startSegmentStart,
-//       endSegmentStart: selectedRange.endSegmentStart,
-//       startOffset: selectedRange.startOffset,
-//       endOffset: selectedRange.endOffset,
-
-//       preview: selectedRange.preview,
-//       createdAt: Date.now(),
-//     };
-//     // spread the existing notes and add the new note to the array, then save it back to storage
-//     chrome.storage.local.get([SAVED_NOTES_KEY], (result) => {
-//       const notes = (result[SAVED_NOTES_KEY] || []) as (typeof note)[];
-//       // this is an arrar of objects
-//       // we are creating a new array with the existing notes and the new note added to it
-//       const updatedNotes = [...notes, note];
-
-//       // Check if adding this note would exceed the storage quota
-//       chrome.storage.local.getBytesInUse(null, (bytesInUse) => {
-//         // here are finding the size of the existing notes and the new note to estimate if adding it would exceed the quota
-//         const oldSize = new Blob([JSON.stringify(notes)]).size;
-//         const newSize = new Blob([JSON.stringify(updatedNotes)]).size;
-//         const estimatedBytes = newSize - oldSize;
-
-//         const quota = chrome.storage.local.QUOTA_BYTES;
-
-//         if (bytesInUse + estimatedBytes > quota) {
-//           alert("Storage is full. Delete some saved notes before adding more.");
-//           return;
-//         }
-
-//         // save in local storage and then popup's useeffect has a
-//         // listener to update the savedNotes state in the popup
-//         //  when storage changes, so we don't need to do anything else here
-//         chrome.storage.local.set({ [SAVED_NOTES_KEY]: updatedNotes }, () => {
-//           if (chrome.runtime.lastError) {
-//             console.error(
-//               "Productive YouTube: Could not save note:",
-//               chrome.runtime.lastError.message,
-//             );
-
-//             alert(
-//               "Could not save your note. Your extension storage may be full.",
-//             );
-//             return;
-//           }
-
-//           button.textContent = "Saved";
-
-//           setTimeout(() => {
-//             button.style.display = "none";
-//             button.textContent = "Save note";
-//           }, 1000);
-
-//           selectedRange = null;
-//           window.getSelection()?.removeAllRanges();
-//         });
-//       });
-//     });
-//   });
-// }
-
 function setupTranscriptNoteSaving(): void {
   if (document.getElementById("save-transcript-note-button")) {
     return;
@@ -327,7 +182,7 @@ function setupTranscriptNoteSaving(): void {
   button.addEventListener("click", () => {
     if (!selectedRange) return;
 
-    const videoId = new URL(window.location.href).searchParams.get("v");
+        const videoId = new URL(window.location.href).searchParams.get("v");
 
     if (!videoId) {
       alert("Could not identify this video.");
@@ -340,7 +195,6 @@ function setupTranscriptNoteSaving(): void {
       videoTitle: getVideoTitle(),
       startTime: selectedRange.startTime,
       endTime: selectedRange.endTime,
-      startSegmentStart: selectedRange.startSegmentStart,
       endSegmentStart: selectedRange.endSegmentStart,
       startOffset: selectedRange.startOffset,
       endOffset: selectedRange.endOffset,
@@ -375,7 +229,6 @@ function setupTranscriptNoteSaving(): void {
         const newRange: ActiveSavedNoteRange = {
           startTime: note.startTime,
           endTime: note.endTime,
-          startSegmentStart: note.startSegmentStart,
           endSegmentStart: note.endSegmentStart,
           startOffset: note.startOffset,
           endOffset: note.endOffset,
@@ -404,7 +257,6 @@ function setupTranscriptNoteSaving(): void {
 }
 
 type SavedNoteHighlightRange = {
-  startSegmentStart: number;
   endSegmentStart: number;
   startOffset: number;
   endOffset: number;
@@ -462,7 +314,7 @@ function highlightSavedNote(
     const startSegment = segments.find(
       (segment) =>
         // the segment whose starting time stamp is same as the saved note's starting timestamp is the first segment
-        Number(segment.dataset.start) === preciseRange.startSegmentStart,
+        Number(segment.dataset.start) === preciseRange.startTime,
     );
 
     const endSegment = segments.find(
@@ -511,7 +363,7 @@ function highlightSavedNote(
       }
     }
 
-    // Fallback for this note if its exact text range cannot be reconstructed.
+    // Fallback for this note if its exact text range cannot be reconstructed.here we have to find the exact segment so we can highlight that 
     if (!exactRangeCreated) {
       segments.forEach((segment) => {
         const start = Number(segment.dataset.start);
@@ -542,6 +394,9 @@ function highlightSavedNote(
   } else if (domRanges.length > 0) {
     // CSS Highlight API unavailable: use whole-segment highlighting instead.
     domRanges.forEach((range) => {
+
+      // now we couldnt highlight these DOM Ranges so we had the ranges data we used it to find their parent segment
+
       const startNode = range.startContainer;
       const startElement =
         startNode instanceof Element ? startNode : startNode.parentElement;
@@ -553,17 +408,23 @@ function highlightSavedNote(
       const startSegment = startElement?.closest(".transcript-segment");
       const endSegment = endElement?.closest(".transcript-segment");
 
+      // we have their starting time
       const startTime = Number(
         (startSegment as HTMLElement | null)?.dataset.start,
       );
+
+      // and timestamp of last segment
       const endTime = Number((endSegment as HTMLElement | null)?.dataset.start);
 
+      // we have the savedranges were we had start and end timestamp and offsets and text preview
+      // here we are finding the savedrange whose data matches our above details
       const matchingRange = savedRanges.find(
         (item) =>
-          item.startSegmentStart === startTime &&
+          item.startTime === startTime &&
           item.endSegmentStart === endTime,
       );
 
+      // now that we have a saved range we find its matching segment and apply a class to it
       if (matchingRange) {
         segments.forEach((segment) => {
           const start = Number(segment.dataset.start);
@@ -583,7 +444,7 @@ function highlightSavedNote(
     ? segments.find(
         (segment) =>
           // the segment whose starting timestamp is same as the scrollToRange's starting timestamp save that as target timestamp to scoll to
-          Number(segment.dataset.start) === scrollToRange.startSegmentStart,
+          Number(segment.dataset.start) === scrollToRange.startTime,
       )
     : firstHighlighted;
 
@@ -628,7 +489,6 @@ function restorePendingNoteHighlight(): void {
       activeSavedNoteRanges = videoNotes.map((note) => ({
         startTime: note.startTime,
         endTime: note.endTime,
-        startSegmentStart: note.startSegmentStart,
         endSegmentStart: note.endSegmentStart,
         startOffset: note.startOffset,
         endOffset: note.endOffset,
@@ -650,7 +510,6 @@ function restorePendingNoteHighlight(): void {
             const pendingRange = {
               startTime: pendingResponse.data.startTime,
               endTime: pendingResponse.data.endTime,
-              startSegmentStart: pendingResponse.data.startSegmentStart,
               endSegmentStart: pendingResponse.data.endSegmentStart,
               startOffset: pendingResponse.data.startOffset,
               endOffset: pendingResponse.data.endOffset,
@@ -659,10 +518,10 @@ function restorePendingNoteHighlight(): void {
             // Check whether this note is already in the Supabase results.
             // now we have all the notes from the supabase we are finding the index of the note whose data is same as that of the note clicked which is basically the pending note range here
 
+            // returns the index of the element that matches these conditions
             const existingIndex = activeSavedNoteRanges.findIndex(
               (range) =>
-                range.startSegmentStart === pendingRange.startSegmentStart &&
-                range.endSegmentStart === pendingRange.endSegmentStart &&
+                range.startTime === pendingRange.startTime &&
                 range.startOffset === pendingRange.startOffset &&
                 range.endOffset === pendingRange.endOffset,
             );
