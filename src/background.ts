@@ -10,53 +10,22 @@ import {
   generateArticle,
 } from "./geminiArticle";
 
+import {
+  generateThumbnailSummary,
+  getCachedThumbnailSummary,
+} from "./geminiSummary";
+
+import {
+  getCachedArticle,
+  generateArticle,
+} from "./geminiArticle";
+
+import { handleAuthMessage, registerAuthBroadcast } from "./auth/authService";
+import type { AuthRequest } from "./auth/types";
+//immediately initializes when background.ts loads and registers a listener with supabase
+registerAuthBroadcast();
+// this listener waits for messages from other parts of my extention
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-  if (request.type === "GET_ARTICLE") {
-    getCachedArticle(request.videoId)
-      .then(sendResponse)
-      .catch((error) => {
-        sendResponse({ success: false, error: error.message });
-      });
-    return true;
-  }
-
-  if (request.type === "GENERATE_ARTICLE") {
-    generateArticle({
-      videoId: request.videoId,
-      title: request.title,
-      channel: request.channel,
-      transcript: request.transcript,
-    })
-      .then(sendResponse)
-      .catch((error) => {
-        sendResponse({ success: false, errorCode: "BAD_RESPONSE", error: error.message });
-      });
-    return true;
-  }
-
-  if (request.type === "GET_THUMBNAIL_SUMMARY") {
-    getCachedThumbnailSummary(request.videoId)
-      .then(sendResponse)
-      .catch((error) => {
-        sendResponse({ success: false, error: error.message });
-      });
-    return true;
-  }
-
-  if (request.type === "GENERATE_THUMBNAIL_SUMMARY") {
-    generateThumbnailSummary({
-      videoId: request.videoId,
-      title: request.title,
-      channel: request.channel,
-      transcript: request.transcript,
-    })
-      .then(sendResponse)
-      .catch((error) => {
-        sendResponse({ success: false, errorCode: "BAD_RESPONSE", error: error.message });
-      });
-    return true;
-  }
-
   if (request.type === "FETCH_TRANSCRIPT") {
     handleTranscriptFetch(request.url)
       .then(sendResponse)

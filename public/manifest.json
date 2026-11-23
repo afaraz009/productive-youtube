@@ -1,3 +1,4 @@
+
 {
   "manifest_version": 3,
   "name": "Productive YouTube - Focus & Distraction Blocker",
@@ -14,10 +15,12 @@
     "https://chat.openai.com/*",
     "https://gemini.google.com/*",
     "https://claude.ai/*",
-    "https://grok.com/*"
+    "https://grok.com/*",
+    "https://*.supabase.co/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {

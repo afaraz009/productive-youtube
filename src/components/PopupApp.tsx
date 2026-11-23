@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import HighlightsView from "./HighlightsView";
 
+import { useAuth } from "../hooks/useAuth";
+import AccountBar from "./AccountBar";
+import { openAuthPage } from "../auth/openAuthPage";
+
 type AIService = 'chatgpt' | 'gemini' | 'claude' | 'grok';
 
 interface AIPrompts {
@@ -17,6 +21,9 @@ interface Settings {
   removeWatchPageSuggestions: boolean;
   showTranscript: boolean;
   thumbnailSummary: boolean;
+  //remove comments
+  removeComments: boolean;
+
   huggingfaceApiKey?: string;
 
   // Thumbnail TL;DR (read by background.ts, never by the content script)
@@ -42,20 +49,20 @@ const ToggleSwitch: React.FC<{
   description?: string;
 }> = ({ id, label, checked, onChange, description }) => {
   return (
-    <div className="flex items-start justify-between py-3 group">
-      <div className="flex-1 pr-3">
-        <span className="text-sm font-medium text-slate-900 dark:text-slate-100 block">
+    <div className="flex items-center justify-between gap-4 py-4">
+      <div className="flex-1 min-w-0">
+        <span className="text-sm font-medium text-slate-900 dark:text-slate-100 block leading-tight">
           {label}
         </span>
         {description && (
-          <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block leading-relaxed">
+          <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block leading-snug">
             {description}
           </span>
         )}
       </div>
       <label
         htmlFor={id}
-        className="relative inline-flex items-center cursor-pointer mt-0.5 flex-shrink-0"
+        className="relative inline-flex items-center cursor-pointer flex-shrink-0"
       >
         <input
           type="checkbox"
@@ -64,29 +71,31 @@ const ToggleSwitch: React.FC<{
           onChange={(e) => onChange(e.target.checked)}
           className="sr-only peer"
         />
-        <div className="w-10 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-blue-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-slate-400 dark:after:border-slate-500 after:border-2 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-blue-500 peer-checked:to-blue-600 shadow-sm"></div>
+        <div className="w-11 h-6 rounded-full bg-[#802C62]/25 transition-colors peer-checked:bg-[#802C62] peer-focus-visible:ring-2 peer-focus-visible:ring-[#802C62] peer-focus-visible:ring-offset-2 dark:peer-focus-visible:ring-offset-slate-900 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5"></div>
       </label>
     </div>
   );
 };
 //-------------------------------------------------------------------------------------------------------
-const PopupApp: React.FC = () => {
-  const defaultSettings: Settings = {
-    removeShorts: true,
-    removeShortsButton: true,
-    removeHomepageVideos: true,
-    removeWatchPageSuggestions: true,
-    showTranscript: false,
+const defaultSettings: Settings = {
+  removeShorts: false,
+  removeShortsButton: true,
+  removeHomepageVideos: true,
+  removeWatchPageSuggestions: true,
+  showTranscript: false,
     thumbnailSummary: true,
-    huggingfaceApiKey: "",
+  //remove comments
+  removeComments: false,
+
+  huggingfaceApiKey: "",
     geminiApiKey: "",
     geminiModel: "gemini-3.5-flash-lite",
 
-    // AI Settings
-    aiService: 'chatgpt',
-    aiPrompts: {
-      translate: "Translate the following transcript in urdu. Keep the timestamps and the same format in translated content",
-      summarize: `# YouTube Video Summary Generator
+  // AI Settings
+  aiService: 'chatgpt',
+  aiPrompts: {
+    translate: "Translate the following transcript in urdu. Keep the timestamps and the same format in translated content",
+    summarize: `# YouTube Video Summary Generator
 
 ## Instructions
 You will be provided with the Title, URL, and Transcript of a YouTube video.
@@ -121,16 +130,25 @@ If relevant, include brief sections on:
 - Key questions addressed or left unanswered
 
 Format all hyperlinks properly to ensure they are clickable and lead to the correct timestamp in the video.`,
-      vocabulary: "Find all difficult words and create a table of English to Urdu and English to English meaning"
-    }
-  };
+    vocabulary: "Find all difficult words and create a table of English to Urdu and English to English meaning"
+  }
+};
 
+//browser loads the settings from storage and updates the default settings
+const hasChromeStorage = () =>
+  typeof chrome !== "undefined" && !!chrome.storage;
+
+const PopupApp: React.FC = () => {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [activeView, setActiveView] = useState("settings");
 
   // result = settings retrieved from Chrome storage.
   // defaultSettings = fallback settings defined by your application.
   // loadedSettings = combination of both, where saved settings override defaults.
+  const [showAISettings, setShowAISettings] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+  //auth ....
+  const auth = useAuth();
 
   // Load settings from Chrome storage
   useEffect(() => {
@@ -179,10 +197,9 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
 
   // AI Service handler
   const handleAIServiceChange = (value: AIService) => {
-    const newSettings = { ...settings, aiService: value };
-    setSettings(newSettings);
+    setSettings((prev) => ({ ...prev, aiService: value }));
 
-    if (typeof chrome !== "undefined" && chrome.storage) {
+    if (hasChromeStorage()) {
       chrome.storage.local.set({ aiService: value });
     }
   };
@@ -190,16 +207,28 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
   // AI Prompt handler
   const handlePromptChange = (promptType: keyof AIPrompts, value: string) => {
     const newPrompts = { ...settings.aiPrompts, [promptType]: value };
-    const newSettings = { ...settings, aiPrompts: newPrompts };
-    setSettings(newSettings);
+    setSettings((prev) => ({ ...prev, aiPrompts: newPrompts }));
 
-    if (typeof chrome !== "undefined" && chrome.storage) {
+    if (hasChromeStorage()) {
       chrome.storage.local.set({ aiPrompts: newPrompts });
     }
   };
-  
 
-  const [showAISettings, setShowAISettings] = useState(false);
+  // Reset AI settings: one state update and one storage write
+  const handleResetAI = () => {
+    setSettings((prev) => ({
+      ...prev,
+      aiService: defaultSettings.aiService,
+      aiPrompts: { ...defaultSettings.aiPrompts },
+    }));
+
+    if (hasChromeStorage()) {
+      chrome.storage.local.set({
+        aiService: defaultSettings.aiService,
+        aiPrompts: defaultSettings.aiPrompts,
+      });
+    }
+  };
 
   return (
     
@@ -212,7 +241,8 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
         </p>
       </div>
 
-      <div className="p-4">
+      {/* Toggles */}
+      <div className="px-6 divide-y divide-slate-100 dark:divide-slate-800">
         <ToggleSwitch
           id="shorts-toggle"
           label="Remove Shorts Shelves"
@@ -334,33 +364,39 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
         </button>
       </div>
 
-      {/* AI Settings Section */}
-      <div className="px-4 pt-3 border-t border-slate-200 dark:border-slate-700">
+      {/* AI Settings */}
+      <div className="border-t border-slate-200 dark:border-slate-800">
         <button
           onClick={() => setShowAISettings(!showAISettings)}
-          className="w-full flex items-center justify-between py-2 text-left"
+          aria-expanded={showAISettings}
+          className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
         >
-          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
             AI Settings
           </span>
-          <span className="text-slate-500 dark:text-slate-400 transition-transform" style={{
-            transform: showAISettings ? 'rotate(180deg)' : 'rotate(0deg)'
-          }}>
-            ▼
-          </span>
+          <svg
+            className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${
+              showAISettings ? "rotate-180" : ""
+            }`}
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M5 8l5 5 5-5" />
+          </svg>
         </button>
 
         {showAISettings && (
-          <div className="space-y-4 pb-3">
-            {/* AI Service Selector */}
+          <div className="px-6 pt-1 pb-5 space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
-                AI Service
-              </label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">AI Service</label>
               <select
                 value={settings.aiService}
                 onChange={(e) => handleAIServiceChange(e.target.value as AIService)}
-                className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                className="w-full px-3 py-2 text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#802C62] focus:ring-1 focus:ring-[#802C62]"
               >
                 <option value="chatgpt">ChatGPT</option>
                 <option value="gemini">Google Gemini</option>
@@ -369,63 +405,59 @@ Format all hyperlinks properly to ensure they are clickable and lead to the corr
               </select>
             </div>
 
-            {/* Translate Prompt */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Translation Prompt
-              </label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">Translation Prompt</label>
               <textarea
                 value={settings.aiPrompts.translate}
-                onChange={(e) => handlePromptChange('translate', e.target.value)}
+                onChange={(e) => handlePromptChange("translate", e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                className="w-full px-3 py-2 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#802C62] focus:ring-1 focus:ring-[#802C62] resize-none"
               />
             </div>
 
-            {/* Summarize Prompt */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Summary Prompt
-              </label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">Summary Prompt</label>
               <textarea
                 value={settings.aiPrompts.summarize}
-                onChange={(e) => handlePromptChange('summarize', e.target.value)}
+                onChange={(e) => handlePromptChange("summarize", e.target.value)}
                 rows={6}
-                className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                className="w-full px-3 py-2 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#802C62] focus:ring-1 focus:ring-[#802C62] resize-none font-mono"
               />
             </div>
 
-            {/* Vocabulary Prompt */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Vocabulary Prompt
-              </label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">Vocabulary Prompt</label>
               <textarea
                 value={settings.aiPrompts.vocabulary}
-                onChange={(e) => handlePromptChange('vocabulary', e.target.value)}
+                onChange={(e) => handlePromptChange("vocabulary", e.target.value)}
                 rows={2}
-                className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                className="w-full px-3 py-2 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#802C62] focus:ring-1 focus:ring-[#802C62] resize-none"
               />
             </div>
 
-            {/* Reset Button */}
             <button
-              onClick={() => {
-                handleAIServiceChange(defaultSettings.aiService);
-                handlePromptChange('translate', defaultSettings.aiPrompts.translate);
-                handlePromptChange('summarize', defaultSettings.aiPrompts.summarize);
-                handlePromptChange('vocabulary', defaultSettings.aiPrompts.vocabulary);
-              }}
-              className="w-full px-3 py-2 text-xs font-medium text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
+              onClick={handleResetAI}
+              className="w-full px-3 py-2.5 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
             >
-              Reset to Defaults
+              Reset to defaults
             </button>
           </div>
         )}
       </div>
 
-      <div className="text-xs text-slate-500 dark:text-slate-400 text-center mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
-        Version 2.0.3 • Built for focus 💙
+      {/* Footer */}
+      <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1.5">
+        <span>Version 2.0.3</span>
+        <span aria-hidden="true">•</span>
+        <span>Built for Focus</span>
+        <svg
+          className="w-3.5 h-3.5"
+          viewBox="0 0 24 24"
+          fill="#FFD749"
+          aria-hidden="true"
+        >
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+        </svg>
       </div>
     </div>
     ) : (

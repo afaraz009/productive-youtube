@@ -2,17 +2,33 @@
 // Import types
 import { Settings } from "./types";
 
+import { initAuthState } from "./authState";
+
 // Import settings management
 import { settings, loadSettings, updateSettings } from "./settings";
 
 // Import removers
 import { removeShorts, throttledRemoveShorts } from "./removers/shorts";
-import { removeHomepageVideos, throttledRemoveHomepageVideos } from "./removers/homepage";
-import { removeVideoSuggestions, throttledRemoveVideoSuggestions } from "./removers/suggestions";
-import { removeShortsButton, throttledRemoveShortsButton } from "./removers/shortsButton";
-
+import {
+  removeHomepageVideos,
+  throttledRemoveHomepageVideos,
+} from "./removers/homepage";
+import {
+  removeVideoSuggestions,
+  throttledRemoveVideoSuggestions,
+} from "./removers/suggestions";
+import {
+  removeShortsButton,
+  throttledRemoveShortsButton,
+} from "./removers/shortsButton";
+import { removeComments, throttledRemoveComments } from "./removers/comments";
 // Import transcript functionality
-import { showVideoTranscript, cleanupTranscript, isWatchPage, isHomePage } from "./transcript";
+import {
+  showVideoTranscript,
+  cleanupTranscript,
+  isWatchPage,
+  isHomePage,
+} from "./transcript";
 
 // Import thumbnail TL;DR feature
 import {
@@ -26,6 +42,12 @@ let lastVideoId: string | null = null;
 
 // Extended initialization to handle all features
 function initializeFullExtension(): void {
+  initAuthState((user) => {
+    console.log(
+      "[Productive YouTube] auth state:",
+      user ? user.email : "signed out",
+    );
+  });
   // Load settings and then initialize
   loadSettings(function () {
     // Apply all removals based on settings
@@ -73,6 +95,7 @@ function applyAllRemovals(): void {
   removeShorts();
   removeShortsButton();
   applyThumbnailSummarySetting();
+  removeComments();
 
   // Page-specific removals
   if (isWatchPage()) {
@@ -100,7 +123,7 @@ function applyAllRemovals(): void {
 function applyAllRemovalsThrottled(): void {
   throttledRemoveShorts();
   throttledRemoveShortsButton();
-
+  throttledRemoveComments();
   if (isWatchPage()) {
     throttledRemoveVideoSuggestions();
     // Note: showVideoTranscript is handled by navigation listener, not here
@@ -154,6 +177,8 @@ function handleYouTubeNavigation(): void {
     lastVideoId = null;
     cleanupTranscript(); // Remove transcript when navigating away from watch page
   }
+
+  removeComments();
 }
 
 

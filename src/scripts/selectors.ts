@@ -97,3 +97,29 @@ export const VIDEO_END_SUGGESTIONS_SELECTORS: string[] = [
   ".ytp-scroll-min",
   ".ytp-scroll-max",
 ];
+
+
+
+
+
+
+
+//Video comment Selectors
+export const COMMENTS_SELECTORS: string[] = [
+  "#comments",
+  "ytd-comments", 
+  "ytd-comments#comments",
+  "ytd-comments#comments ytd-item-section-renderer",
+  "ytd-comments#comments ytd-item-section-renderer #contents",
+  "ytd-comment-thread-renderer",
+  "ytd-comment-renderer",
+  "ytd-comments-header-renderer",
+  "ytd-comments-header-renderer #header",
+  "ytd-comments-header-renderer #title",
+  "ytd-comments-header-renderer #count",
+  "ytd-comments-header-renderer #sort-menu",
+  "ytd-comments-header-renderer #sort-menu ytd-toggle-button-renderer",
+  "ytd-comments-header-renderer #sort-menu ytd-toggle-button-renderer yt-icon",
+  "ytd-comments-header-renderer #sort-menu ytd-toggle-button-renderer yt-icon-button",
+  "ytd-comments-header-renderer #sort-menu ytd-toggle-button-renderer yt-icon-button yt-icon",
+];
