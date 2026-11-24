@@ -21,9 +21,6 @@ export function clearActiveSavedNoteRange(): void {
   activeSavedNoteRanges = [];
 }
 
-const SAVED_NOTES_KEY = "savedNotes";
-const PENDING_NOTE_PREFIX = "pendingNoteNavigation_";
-
 // Interface for representing a selected range in the transcript
 type NoteSelection = {
   startTime: number;
@@ -190,7 +187,6 @@ function setupTranscriptNoteSaving(): void {
     }
 
     const note = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       videoId,
       videoTitle: getVideoTitle(),
       startTime: selectedRange.startTime,
@@ -256,11 +252,6 @@ function setupTranscriptNoteSaving(): void {
   });
 }
 
-type SavedNoteHighlightRange = {
-  endSegmentStart: number;
-  startOffset: number;
-  endOffset: number;
-};
 function addSavedNoteStyles(): void {
   if (document.getElementById("saved-note-styles")) return;
 
@@ -392,52 +383,20 @@ function highlightSavedNote(
 
     console.log("Highlighted", domRanges.length, "exact note ranges");
   } else if (domRanges.length > 0) {
-    // CSS Highlight API unavailable: use whole-segment highlighting instead.
-    domRanges.forEach((range) => {
+  // CSS Highlight API unavailable: use whole-segment highlighting instead.
 
-      // now we couldnt highlight these DOM Ranges so we had the ranges data we used it to find their parent segment
+  savedRanges.forEach((savedRange) => {
+    segments.forEach((segment) => {
+      const start = Number(segment.dataset.start);
+      const end = start + Number(segment.dataset.duration || 0);
 
-      const startNode = range.startContainer;
-      const startElement =
-        startNode instanceof Element ? startNode : startNode.parentElement;
-
-      const endNode = range.endContainer;
-      const endElement =
-        endNode instanceof Element ? endNode : endNode.parentElement;
-
-      const startSegment = startElement?.closest(".transcript-segment");
-      const endSegment = endElement?.closest(".transcript-segment");
-
-      // we have their starting time
-      const startTime = Number(
-        (startSegment as HTMLElement | null)?.dataset.start,
-      );
-
-      // and timestamp of last segment
-      const endTime = Number((endSegment as HTMLElement | null)?.dataset.start);
-
-      // we have the savedranges were we had start and end timestamp and offsets and text preview
-      // here we are finding the savedrange whose data matches our above details
-      const matchingRange = savedRanges.find(
-        (item) =>
-          item.startTime === startTime &&
-          item.endSegmentStart === endTime,
-      );
-
-      // now that we have a saved range we find its matching segment and apply a class to it
-      if (matchingRange) {
-        segments.forEach((segment) => {
-          const start = Number(segment.dataset.start);
-          const end = start + Number(segment.dataset.duration || 0);
-
-          if (start < matchingRange.endTime && end > matchingRange.startTime) {
-            segment.classList.add("saved-note-segment");
-          }
-        });
+      // Check whether this transcript segment overlaps the saved note.
+      if (start < savedRange.endTime && end > savedRange.startTime) {
+        segment.classList.add("saved-note-segment");
       }
     });
-  }
-
+  });
+}
   // If a specific note was provided, scroll to that note.
   // Otherwise, keep the existing first-highlight behaviour.
   const targetSegment = scrollToRange

@@ -2,17 +2,33 @@
 
 import { handleAuthMessage, registerAuthBroadcast } from "./auth/authService";
 import type { AuthRequest } from "./auth/types";
-import {
-  deleteSavedNote,
-  getSavedNotes,
-  saveNote,
-} from "./notes/notesService";
+import { deleteSavedNote, getSavedNotes, saveNote } from "./notes/notesService";
 import { isNotesRequest } from "./notes/types";
 import type { NotesRequest, NotesResponse } from "./notes/types";
 import type { SavedNote } from "./scripts/types";
 //immediately initializes when background.ts loads and registers a listener with supabase
 registerAuthBroadcast();
+const PENDING_NOTE_TTL = 10 * 60 * 1000; // 10 minutes
 // this listener waits for messages from other parts of my extention
+
+
+// It runs for any closed tab, returns its tab id we use that tab id to make our key and then remove the data from the storage and since removing a key that doesn’t exist is harmless we are good to go 
+chrome.tabs.onRemoved.addListener((tabId) => {
+  console.log("Tab closed, cleaning pending note:", tabId);
+
+  const storageKey = `pendingNoteNavigation_${tabId}`;
+
+  chrome.storage.local.remove(storageKey, () => {
+    if (chrome.runtime.lastError) {
+      console.error(
+        "Failed to clean up pending note navigation:",
+        chrome.runtime.lastError.message,
+      );
+    } else {
+      console.log("Pending note cleanup completed:", storageKey);
+    }
+  });
+});
 
 //display...notes1
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
@@ -24,13 +40,13 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
   //auth..
   if (typeof request.type === "string" && request.type.startsWith("AUTH_")) {
-  if (_sender.id !== chrome.runtime.id) return false; // own extension only
+    if (_sender.id !== chrome.runtime.id) return false; // own extension only
 
-  //helps decide which authentication operation to execute
-  //the response goes to chrome.runtime.sendMessage in authApi.ts
-  handleAuthMessage(request as AuthRequest).then(sendResponse);
-  return true; // keep the channel open for the async response
-}
+    //helps decide which authentication operation to execute
+    //the response goes to chrome.runtime.sendMessage in authApi.ts
+    handleAuthMessage(request as AuthRequest).then(sendResponse);
+    return true; // keep the channel open for the async response
+  }
   if (request.type === "FETCH_TRANSCRIPT") {
     handleTranscriptFetch(request.url)
       .then(sendResponse)
@@ -109,26 +125,100 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
 //notes2...
 async function handleNotesRequest(
-request: NotesRequest,
+  request: NotesRequest,
 ): Promise<NotesResponse<SavedNote | SavedNote[] | null>> {
-try {
-  switch (request.type) {
-    case "SAVE_NOTE":
-      //notes3....
-      return { success: true, data: await saveNote(request.note) };
-    case "GET_SAVED_NOTES":
-      return { success: true, data: await getSavedNotes() };
-    case "DELETE_SAVED_NOTE":
-      await deleteSavedNote(request.noteId);
-      return { success: true, data: null };
+  try {
+    switch (request.type) {
+      case "SAVE_NOTE":
+        //notes3....
+        return { success: true, data: await saveNote(request.note) };
+      case "GET_SAVED_NOTES":
+        return { success: true, data: await getSavedNotes() };
+      case "DELETE_SAVED_NOTE":
+        await deleteSavedNote(request.noteId);
+        return { success: true, data: null };
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "The note operation failed.";
+    console.error("[NOTES ERROR]", error);
+    return { success: false, error: message };
   }
-} catch (error) {
-  const message =
-    error instanceof Error ? error.message : "The note operation failed.";
-  console.error("[NOTES ERROR]", error);
-  return { success: false, error: message };
 }
+
+// this is just to make sure the pending range is not expired 
+async function getPendingNoteRange(tabId: number) {
+  const storageKey = `pendingNoteNavigation_${tabId}`;
+
+  const result = await chrome.storage.local.get(storageKey);
+  const savedRange = result[storageKey];
+
+  if (!savedRange) {
+    return null;
+  }
+
+  const isExpired =
+    typeof savedRange.createdAt !== "number" ||
+    Date.now() - savedRange.createdAt > PENDING_NOTE_TTL;
+
+  if (isExpired) {
+    await chrome.storage.local.remove(storageKey);
+    return null;
+  }
+
+  return savedRange;
 }
+
+async function cleanupExpiredPendingNotes() {
+  try {
+    const storedData = await chrome.storage.local.get(null);
+    const now = Date.now();
+
+    const expiredKeys = Object.entries(storedData)
+      .filter(([key, value]) => {
+        // Filter only pending-note entries.
+        if (!key.startsWith("pendingNoteNavigation_")) {
+          return false;
+        }
+
+        const createdAt = (value as { createdAt?: unknown })?.createdAt;
+
+        const isInvalidTimestamp =
+          typeof createdAt !== "number" || !Number.isFinite(createdAt);
+
+        const isExpired =
+          !isInvalidTimestamp && now - createdAt > PENDING_NOTE_TTL;
+
+        return isInvalidTimestamp || isExpired;
+      })
+      .map(([key]) => key);
+
+    if (expiredKeys.length > 0) {
+      await chrome.storage.local.remove(expiredKeys);
+
+      console.log(
+        "Cleaned up expired pending notes:",
+        expiredKeys,
+      );
+    }
+  } catch (error) {
+    console.error("Failed to clean expired pending notes:", error);
+  }
+}
+
+// onStartup triggers cleanup when Chrome starts, so expired pending ranges are removed.
+
+chrome.runtime.onStartup.addListener(() => {
+  void cleanupExpiredPendingNotes();
+});
+
+// Fired when the extension is first installed, when the extension is updated to a new version, and when Chrome is updated to a new version.
+chrome.runtime.onInstalled.addListener(() => {
+  void cleanupExpiredPendingNotes();
+});
+
+
+// This is important because the content script needs to know whether it should temporarily show the transcript.
 
 // this function tells us that if the note was opened via clicking in popup so if it has value in local storage against that tab id means openedbyclick so it will return true and hence in show transcript even if setting is off this being temp on will show the transcript and will not disturb the setting
 async function checkPendingSavedNote(sender: chrome.runtime.MessageSender) {
@@ -138,18 +228,15 @@ async function checkPendingSavedNote(sender: chrome.runtime.MessageSender) {
     return { success: false, isPending: false };
   }
 
-  const storageKey = `pendingNoteNavigation_${tabId}`;
-
-  const result = await chrome.storage.local.get(storageKey);
+  const savedRange = await getPendingNoteRange(tabId);
 
   return {
     success: true,
-    isPending: !!result[storageKey],
+    isPending: !!savedRange,
   };
 }
 
-
-// this function is called when the content script sends a message to the background to get the saved note range for the newly opened tab
+// this function is called when the content script sends a message to the background to get the saved note range for the newly opened tab and this is the normal flow where use4r successfully hits the url and note is highlighted and so it removed the key from storage
 async function handleGetSavedNoteRange(sender: chrome.runtime.MessageSender) {
   const tabId = sender.tab?.id;
 
@@ -157,21 +244,22 @@ async function handleGetSavedNoteRange(sender: chrome.runtime.MessageSender) {
     return { success: false, error: "Could not identify requesting tab" };
   }
 
-  const storageKey = `pendingNoteNavigation_${tabId}`;
-
-  const result = await chrome.storage.local.get(storageKey);
-
-  const savedRange = result[storageKey];
+  const savedRange = await getPendingNoteRange(tabId);
 
   if (!savedRange) {
     return { success: true, data: null };
   }
 
   // Remove the temporary range after it has been retrieved
-  await chrome.storage.local.remove(storageKey);
+  await chrome.storage.local.remove(`pendingNoteNavigation_${tabId}`);
 
   return { success: true, data: savedRange };
 }
+
+
+// There are two important operations that can fail:
+// 1. Saving the range in Chrome storage.
+// 2. Navigating the newly created tab to YouTube and in these cases the pending key would always be in the storage and never removed
 async function handleSavedNoteOpen(
   videoId: string,
   startTime: number,
@@ -180,6 +268,8 @@ async function handleSavedNoteOpen(
   startOffset: number,
   endOffset: number,
 ) {
+
+  // create an empty tab
   const tab = await chrome.tabs.create({
     url: "about:blank",
     active: true,
@@ -189,38 +279,63 @@ async function handleSavedNoteOpen(
     throw new Error("Failed to create saved note tab");
   }
 
+  // take the tab key and make the key out of it
   const tabId = tab.id;
   const storageKey = `pendingNoteNavigation_${tabId}`;
 
-  await new Promise<void>((resolve, reject) => {
-    chrome.storage.local.set(
-      {
-        [storageKey]: {
-          startTime,
-          endTime,
-          endSegmentStart,
-          startOffset,
-          endOffset,
+  try {
+    // Step 1: Save the temporary note range
+    await new Promise<void>((resolve, reject) => {
+      chrome.storage.local.set(
+        {
+          [storageKey]: {
+            startTime,
+            endTime,
+            endSegmentStart,
+            startOffset,
+            endOffset,
+            createdAt: Date.now(),
+          },
         },
-      },
-      () => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-          return;
-        }
-        resolve();
-      },
-    );
-  });
+        () => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
 
-  const url =
-    `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}` +
-    `&t=${Math.floor(startTime)}s`;
+          resolve();
+        },
+      );
+    });
 
-  await chrome.tabs.update(tabId, { url });
+    // Step 2: Navigate to the YouTube video
+    const url =
+      `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}` +
+      `&t=${Math.floor(startTime)}s`;
 
-  return { success: true, tabId };
+      // update the blank tab with this new url 
+    await chrome.tabs.update(tabId, { url });
+    return { success: true, tabId };
+  } catch (error) {
+    // Step 3: Clean up pending data if anything fails
+    try {
+      await chrome.storage.local.remove(storageKey);
+    } catch (cleanupError) {
+      console.error("Failed to remove pending note data:", cleanupError);
+    }
+
+    // Step 4: Close the tab we created
+    try {
+      await chrome.tabs.remove(tabId);
+    } catch (cleanupError) {
+      console.error("Failed to close saved note tab:", cleanupError);
+    }
+
+    // Preserve the original error
+    throw error;
+  }
 }
+
 async function handleTranslation(text: string) {
   try {
     // Using MyMemory Translation API (completely free, no key required)

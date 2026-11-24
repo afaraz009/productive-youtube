@@ -16,7 +16,7 @@ export interface Database {
           created_at: number;
         };
         Insert: {
-          id: string;
+          id?: string;
           user_id: string;
           video_id: string;
           video_title: string;

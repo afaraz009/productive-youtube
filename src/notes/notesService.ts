@@ -3,11 +3,14 @@ import type { SavedNote } from "../scripts/types";
 import type { Database } from "./database.types";
 
 type NoteRow = Database["public"]["Tables"]["notes"]["Row"];
+type NoteInsert = Database["public"]["Tables"]["notes"]["Insert"];
 
 //notes5...
-function toNoteRow(note: SavedNote, userId: string): NoteRow {
+function toNoteRow(
+  note: Omit<SavedNote, "id">,
+  userId: string,
+): NoteInsert {
   return {
-    id: note.id,
     user_id: userId,
     video_id: note.videoId,
     video_title: note.videoTitle,
@@ -47,8 +50,11 @@ async function requireUserId(): Promise<string> {
 }
 
 //notes4.....
-export async function saveNote(note: SavedNote): Promise<SavedNote> {
+export async function saveNote(
+  note: Omit<SavedNote, "id">,
+): Promise<SavedNote> {
   const userId = await requireUserId();
+
   const { data, error } = await supabase
     .from("notes")
     .insert(toNoteRow(note, userId))
@@ -56,6 +62,7 @@ export async function saveNote(note: SavedNote): Promise<SavedNote> {
     .single();
 
   if (error) throw error;
+
   return toSavedNote(data);
 }
 

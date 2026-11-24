@@ -43,15 +43,6 @@ export interface Settings {
 
 }
 
-// export interface SavedNote {
-//   id: string;
-//   videoId: string;
-//   videoTitle: string;
-//   startTime: number;
-//   endTime: number;
-//   preview: string;
-//   createdAt: number;
-// }
 
 export type SavedNote = {
   id: string;
