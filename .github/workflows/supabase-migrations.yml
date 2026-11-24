@@ -38,9 +38,7 @@ jobs:
       # workflow creates that commit, so checking there would show a temporary red.
       - name: Generate database types from the migrated schema
         if: github.event_name == 'push'
-        run: |
-          supabase gen types --schema public > "$RUNNER_TEMP/database.types.ts"
-          sed -i '1s/^\xEF\xBB\xBF//; s/\r$//' "$RUNNER_TEMP/database.types.ts"
+        run: supabase gen types --schema public > "$RUNNER_TEMP/database.types.ts"
 
       - name: Check committed database types are up to date
         if: github.event_name == 'push'
