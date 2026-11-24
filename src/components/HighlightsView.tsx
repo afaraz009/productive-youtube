@@ -18,6 +18,9 @@ const HighlightsView: React.FC<{ setActiveView: (view: string) => void }> = ({
   // filled in one by one as they arrive; until then a card shows the videoId
   const [titles, setTitles] = useState<Record<string, string>>({});
 
+  // why loading failed (e.g. "Sign in to save and sync highlights."), "" if it didn't
+  const [loadError, setLoadError] = useState("");
+
   // load them once, when the view opens
   useEffect(() => {
     //same as -> getAllHighlights().then((list) => setHighlights(list));
@@ -42,7 +45,9 @@ const HighlightsView: React.FC<{ setActiveView: (view: string) => void }> = ({
           // offline → keep showing the videoId
         }
       });
-    });
+    })
+    // signed out or offline → show why instead of the empty message
+    .catch((err) => setLoadError(err instanceof Error ? err.message : "Could not load your highlights."));
   }, []);
   
   const openVideo = (videoId: string, timestamp: number) => {
@@ -71,7 +76,10 @@ const HighlightsView: React.FC<{ setActiveView: (view: string) => void }> = ({
 
       {/* body */}
       <div className="p-4">
-        {highlights.length === 0 ? (
+        {loadError ? (
+          // couldn't load (e.g. signed out)
+          <p className="py-8 text-center text-xs text-red-600 dark:text-red-400">{loadError}</p>
+        ) : highlights.length === 0 ? (
           // nothing saved yet
           <p className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
             No highlights yet. Select text in a video's transcript and click "Highlight".

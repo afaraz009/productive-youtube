@@ -3,11 +3,12 @@
 //
 // FLOW
 //   SETUP    setupSelectionHighlight: creates the tooltip, shows it on mouseup
-//   SAVE     click "Highlight" → saveHighlight: Range → plain data → drawHighlight → storage
-//   RESTORE  retrieveSelectionHighlight: storage → plain data → Range → drawHighlight
-//   DELETE   hover a highlight → "Delete" → removeHighlight (storage) → eraseHighlight
+//   SAVE     click "Highlight" → saveHighlight: Range → plain data → drawHighlight → addHighlight (Supabase)
+//   RESTORE  retrieveSelectionHighlight: getHighlights (Supabase) → plain data → Range → drawHighlight
+//   DELETE   hover a highlight → "Delete" → removeHighlight (Supabase) → eraseHighlight
 //
-// SAVED DATA  see highlightStorage.ts (what's saved, and the get/add/remove functions)
+// SAVED DATA  see highlightStorage.ts (what's saved, how it maps to the Supabase row,
+//             and the get/add/remove functions)
 //
 // Each <mark> gets data-highlight-id = the highlight's id, so all marks of one
 // highlight can be found again (see eraseHighlight).
@@ -247,10 +248,17 @@ export async function retrieveSelectionHighlight(content: HTMLElement): Promise<
   const videoId = getVideoId();
   if (!videoId) return; // not on a video page
 
-  // 1. read this video's saved highlights
-  const highlights = await getHighlights(videoId);
+  // 1. read this video's saved highlights from Supabase
+  // (fails when signed out or offline → no highlights to draw, the transcript still works)
+  let highlights;
+  try {
+    highlights = await getHighlights(videoId);
+  } catch (err) {
+    console.warn("[highlight] could not load:", err);
+    return;
+  }
 
-  // the panel may have been rebuilt while we waited for storage → this one is gone
+  // the panel may have been rebuilt while we waited for Supabase → this one is gone
   if (!content.isConnected) return;
 
   for (const highlight of highlights) {

@@ -1,16 +1,19 @@
-// Saved highlights: reading and writing them in chrome.storage.local.
-// Shared by highlight.ts (marking the transcript) and anything that shows saved highlights.
+// Saved highlights: reading and writing them in Supabase (mala's "notes" table).
+// Shared by highlight.ts (marking the transcript) and HighlightsView.tsx (the popup list).
+// Each function calls notesApi.ts → background.ts → notesService.ts → Supabase.
 //
-// SAVED DATA  one key per video:
-//   "highlights_<videoId>": [
-//     { id, start: { key: "8.4", offset: 8 }, end: { key: "11.92", offset: 5 }, text: "the back end…" },
-//   ]
-//   key    = data-start of the caption line (span.transcript-segment) the end is in
+// A HIGHLIGHT (what the frontend works with)
+//   { id, start: { key: "8.4", offset: 8 }, end: { key: "11.92", offset: 5 }, text: "the back end…" }
+//   key    = data-start of the caption line (span.transcript-segment) the start/end is in
 //   offset = how many characters into that line
 //   text   = first 40 characters, only used to check we found the same words again
 //
-// These functions don't catch errors (e.g. storage full, "Extension context
-// invalidated"): the caller decides what to do when one fails.
+// SAVED AS one row per highlight (notesService.ts flattens it):
+//   start.key → start_time, end.key → end_segment_start, offsets → start_offset / end_offset,
+//   text → preview, + video_id, video_title, end_time, user_id, created_at
+//
+// These functions throw when something fails (signed out, offline, ...):
+// the caller decides what to do (highlight.ts warns and, when saving, erases the marks).
 
 import type { SavedHighlight, HighlightWithVideo } from "../types";
 // the Supabase plugs: each one messages background.ts and never throws,
