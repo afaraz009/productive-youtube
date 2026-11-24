@@ -20,7 +20,7 @@ export interface Database {
         };
         // what an insert needs
         Insert: {
-          id: string;
+          id?: string; // left out: the database fills it in (default gen_random_uuid())
           user_id: string;
           video_id: string;
           video_title: string;

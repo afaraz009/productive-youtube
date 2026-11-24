@@ -39,10 +39,11 @@ export async function getAllHighlights(): Promise<HighlightWithVideo[]> {
 
 // save one highlight to Supabase (one new row in mala's notes table)
 // note = { videoId, videoTitle, endTime, highlight }
-export async function addHighlight(note: NoteToSave): Promise<void> {
+// returns the highlight as Supabase saved it (its id is the one the row got)
+export async function addHighlight(note: NoteToSave): Promise<HighlightWithVideo> {
   const response = await saveNote(note);
   if (!response.success) throw new Error(response.error);
-  // data = the saved highlight, not needed: highlight.ts already has it
+  return response.data;
 }
 
 // delete one highlight from Supabase by its id

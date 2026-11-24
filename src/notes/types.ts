@@ -4,11 +4,12 @@ import type { Point, SavedHighlight } from "../scripts/types";
 // mala's notes table needs that the highlight doesn't have.
 //   videoTitle → video_title
 //   endTime    → end_time (end line's data-start + its data-duration)
+// The highlight has no id yet: the database gives the new row one, and saveNote returns it.
 export type NoteToSave = {
   videoId: string;
   videoTitle: string;
   endTime: number;
-  highlight: SavedHighlight;
+  highlight: Omit<SavedHighlight, "id">; // { start, end, text }
 };
 
 // Messages sent to background.ts (by notesApi.ts) to read/write saved highlights
@@ -35,11 +36,11 @@ function isPoint(value: unknown): value is Point {
   );
 }
 
-export function isSavedHighlight(value: unknown): value is SavedHighlight {
+// a highlight that's about to be saved: no id needed (the database makes it)
+function isNewHighlight(value: unknown): value is Omit<SavedHighlight, "id"> {
   if (!value || typeof value !== "object") return false;
   const highlight = value as Record<string, unknown>;
   return (
-    typeof highlight.id === "string" &&
     isPoint(highlight.start) &&
     isPoint(highlight.end) &&
     typeof highlight.text === "string"
@@ -55,7 +56,7 @@ function isNoteToSave(value: unknown): value is NoteToSave {
     typeof note.videoTitle === "string" &&
     typeof note.endTime === "number" &&
     Number.isFinite(note.endTime) &&
-    isSavedHighlight(note.highlight)
+    isNewHighlight(note.highlight)
   );
 }
 

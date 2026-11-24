@@ -8,13 +8,12 @@ import type { NoteToSave } from "./types";
 type NoteRow = Database["public"]["Tables"]["notes"]["Row"];
 type NoteInsert = Database["public"]["Tables"]["notes"]["Insert"];
 
-// frontend shape → table row
-//   { id, start: { key: "8.4", offset: 8 }, end: { key: "11.92", offset: 5 }, text }
-//   → { id, start_time: 8.4, start_offset: 8, end_segment_start: 11.92, end_offset: 5, preview, ... }
+// frontend shape → table row (no id: the database makes it with gen_random_uuid())
+//   { start: { key: "8.4", offset: 8 }, end: { key: "11.92", offset: 5 }, text }
+//   → { start_time: 8.4, start_offset: 8, end_segment_start: 11.92, end_offset: 5, preview, ... }
 function toNoteRow(note: NoteToSave, userId: string): NoteInsert {
   const { highlight } = note;
   return {
-    id: highlight.id,
     user_id: userId,
     video_id: note.videoId,
     video_title: note.videoTitle,

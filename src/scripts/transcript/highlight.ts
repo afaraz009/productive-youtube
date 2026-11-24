@@ -3,7 +3,7 @@
 //
 // FLOW
 //   SETUP    setupSelectionHighlight: creates the tooltip, shows it on mouseup
-//   SAVE     click "Highlight" → saveHighlight: Range → plain data → drawHighlight → addHighlight (Supabase)
+//   SAVE     click "Highlight" → saveHighlight: Range → plain data → addHighlight (Supabase) → drawHighlight (with the saved id)
 //   RESTORE  retrieveSelectionHighlight: getHighlights (Supabase) → plain data → Range → drawHighlight
 //   DELETE   hover a highlight → "Delete" → removeHighlight (Supabase) → eraseHighlight
 //
@@ -212,9 +212,8 @@ async function saveHighlight(): Promise<void> {
   const start = toPoint(range.startContainer, range.startOffset);
   const end = toPoint(range.endContainer, range.endOffset);
   if (!start || !end) return; // starts or ends outside a caption line
-  // ": SavedHighlight" -> this object must have exactly the shape of a SavedHighlight
-  const highlight: SavedHighlight = {
-    id: crypto.randomUUID(),
+  // a SavedHighlight without its id: Supabase gives the saved row one (saved.id below)
+  const highlight: Omit<SavedHighlight, "id"> = {
     start,
     end,
     text: clean(range.toString()).slice(0, TEXT_PREFIX_LENGTH),
@@ -229,17 +228,23 @@ async function saveHighlight(): Promise<void> {
   // videoTitle = the title under the video ("" if YouTube hasn't shown it yet)
   const videoTitle = document.querySelector("ytd-watch-metadata h1")?.textContent?.trim() ?? "";
 
-  // 2. show it
-  drawHighlight(range, highlight.id);
-  selection.removeAllRanges();
-
-  // 3. save it. If saving fails, take it off the screen again.
+  // 2. save it first: the marks get the id of the row Supabase saved
+  let saved;
   try {
-    await addHighlight({ videoId, videoTitle, endTime, highlight });
+    saved = await addHighlight({ videoId, videoTitle, endTime, highlight });
   } catch (err) {
+    // nothing was drawn yet, so there's nothing to take off the screen (the text stays selected)
     console.warn("[highlight] could not save:", err);
-    eraseHighlight(highlight.id);
+    return;
   }
+
+  // the panel may have been rebuilt while we waited for Supabase → this range is gone
+  // (it's saved, so the new panel's restore draws it)
+  if (!range.startContainer.isConnected) return;
+
+  // 3. show it, with the saved id
+  drawHighlight(range, saved.id);
+  selection.removeAllRanges();
 }
 
 // ─── RESTORE: display.ts calls this every time the panel is built ────────────
