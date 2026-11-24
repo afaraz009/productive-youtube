@@ -7,14 +7,14 @@ export type Database = {
           Tables: {
             "notes": {
                   Row: {
-                    "created_at": number,"end_offset": number,"end_segment_start": number,"end_time": number,"id": string,"preview": string,"start_offset": number,"start_time": number,"test_column": string | null,"user_id": string,"video_id": string,"video_title": string
+                    "created_at": number,"end_offset": number,"end_segment_start": number,"end_time": number,"id": string,"preview": string,"start_offset": number,"start_time": number,"test_column": string | null,"types_test": string | null,"user_id": string,"video_id": string,"video_title": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at": number,"end_offset"?: number,"end_segment_start"?: number,"end_time": number,"id": string,"preview": string,"start_offset"?: number,"start_time": number,"test_column"?: string | null,"user_id": string,"video_id": string,"video_title": string
+                    "created_at": number,"end_offset"?: number,"end_segment_start"?: number,"end_time": number,"id": string,"preview": string,"start_offset"?: number,"start_time": number,"test_column"?: string | null,"types_test"?: string | null,"user_id": string,"video_id": string,"video_title": string
                   }
                   Update: {
-                    "created_at"?: number,"end_offset"?: number,"end_segment_start"?: number,"end_time"?: number,"id"?: string,"preview"?: string,"start_offset"?: number,"start_time"?: number,"test_column"?: string | null,"user_id"?: string,"video_id"?: string,"video_title"?: string
+                    "created_at"?: number,"end_offset"?: number,"end_segment_start"?: number,"end_time"?: number,"id"?: string,"preview"?: string,"start_offset"?: number,"start_time"?: number,"test_column"?: string | null,"types_test"?: string | null,"user_id"?: string,"video_id"?: string,"video_title"?: string
                   }
                   Relationships: [
                     
