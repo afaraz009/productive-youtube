@@ -12,46 +12,40 @@
 // These functions don't catch errors (e.g. storage full, "Extension context
 // invalidated"): the caller decides what to do when one fails.
 
-export type Point = { key: string; offset: number };
-export type SavedHighlight = { id: string; start: Point; end: Point; text: string };
+import type { SavedHighlight, HighlightWithVideo } from "../types";
+// the Supabase plugs: each one messages background.ts and never throws,
+// it answers { success: true, data } or { success: false, error }
+import { getSavedNotes, saveNote, deleteSavedNote } from "../../notes/notesApi";
+import type { NoteToSave } from "../../notes/types";
 
-// all saved highlights of one video ([] if none)
+// all saved highlights of one video ([] if none), from Supabase
 export async function getHighlights(videoId: string): Promise<SavedHighlight[]> {
-  const key = `highlights_${videoId}`;
-  const stored = await chrome.storage.local.get(key);
-  return stored[key] ?? [];
+  const response = await getSavedNotes(videoId);
+  // not signed in, offline, ... → throw, so the caller's try/catch handles it
+  if (!response.success) throw new Error(response.error);
+  return response.data;
 }
 
-// a saved highlight + the video it belongs to (taken from its storage key)
-export type HighlightWithVideo = SavedHighlight & { videoId: string };
-
-// every saved highlight of every video, each one tagged with its videoId
-//   { "highlights_abc": [h1, h2], "highlights_xyz": [h3] }
-//   → [ {...h1, videoId: "abc"}, {...h2, videoId: "abc"}, {...h3, videoId: "xyz"} ]
+// every saved highlight of every video (newest first), from Supabase
+// each row already has its video_id, so every item comes back tagged with its videoId
 export async function getAllHighlights(): Promise<HighlightWithVideo[]> {
-  const result = await chrome.storage.local.get(null); // null = everything in storage
-  return Object.entries(result)
-    .filter(([key]) => key.startsWith("highlights_")) // only the highlight lists, not the settings
-    //flatMap joins the per-video arrays into one list:
-    //without flat you’d get an array of arrays, one inner array per video
-    //flatMap() internally performs map() first, then flat(1).
-    .flatMap(([key, value]) => {
-      const videoId = key.slice("highlights_".length); // "highlights_abc" → "abc"
-      const highlights = Array.isArray(value) ? (value as SavedHighlight[]) : [];
-      return highlights.map((highlight) => ({ ...highlight, videoId }));
-    });
+  const response = await getSavedNotes(); // no videoId = every video
+  if (!response.success) throw new Error(response.error);
+  return response.data;
 }
 
-// read this video's list → add one → write back
-export async function addHighlight(videoId: string, highlight: SavedHighlight): Promise<void> {
-  const highlights = await getHighlights(videoId);
-  highlights.push(highlight);
-  await chrome.storage.local.set({ [`highlights_${videoId}`]: highlights });
+// save one highlight to Supabase (one new row in mala's notes table)
+// note = { videoId, videoTitle, endTime, highlight }
+export async function addHighlight(note: NoteToSave): Promise<void> {
+  const response = await saveNote(note);
+  if (!response.success) throw new Error(response.error);
+  // data = the saved highlight, not needed: highlight.ts already has it
 }
 
-// read this video's list → keep all but this id → write back
-export async function removeHighlight(videoId: string, id: string): Promise<void> {
-  const highlights = await getHighlights(videoId);
-  const remaining = highlights.filter((h) => h.id !== id);
-  await chrome.storage.local.set({ [`highlights_${videoId}`]: remaining });
+// delete one highlight from Supabase by its id
+// (no videoId needed: each row has its own unique id)
+export async function removeHighlight(id: string): Promise<void> {
+  const response = await deleteSavedNote(id);
+  if (!response.success) throw new Error(response.error);
+  // nothing to return: on success data is just null
 }

@@ -1,31 +1,49 @@
 // Background service worker for handling API calls (bypasses CORS)
 
-import {
-  generateThumbnailSummary,
-  getCachedThumbnailSummary,
-} from "./geminiSummary";
-
-import {
-  getCachedArticle,
-  generateArticle,
-} from "./geminiArticle";
-
-import {
-  generateThumbnailSummary,
-  getCachedThumbnailSummary,
-} from "./geminiSummary";
-
-import {
-  getCachedArticle,
-  generateArticle,
-} from "./geminiArticle";
+// TL;DR is switched off for now: its message handlers aren't in the listener below.
+// Uncomment these imports when adding the handlers back.
+// import {
+//   generateThumbnailSummary,
+//   getCachedThumbnailSummary,
+// } from "./geminiSummary";
+//
+// import {
+//   getCachedArticle,
+//   generateArticle,
+// } from "./geminiArticle";
 
 import { handleAuthMessage, registerAuthBroadcast } from "./auth/authService";
 import type { AuthRequest } from "./auth/types";
+import {
+  deleteSavedNote,
+  getSavedNotes,
+  saveNote,
+} from "./notes/notesService";
+import { isNotesRequest } from "./notes/types";
+import type { NotesRequest, NotesResponse } from "./notes/types";
+import type { HighlightWithVideo } from "./scripts/types";
 //immediately initializes when background.ts loads and registers a listener with supabase
 registerAuthBroadcast();
 // this listener waits for messages from other parts of my extention
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+  //saved highlights (SAVE_NOTE / GET_SAVED_NOTES / DELETE_SAVED_NOTE)
+  //sent by notesApi.ts, a broken message is skipped (isNotesRequest) and never reaches Supabase
+  if (isNotesRequest(request)) {
+    if (_sender.id !== chrome.runtime.id) return false; // own extension only
+    handleNotesRequest(request).then(sendResponse);
+    return true; // keep the channel open for the async response
+  }
+
+  //auth..
+  if (typeof request.type === "string" && request.type.startsWith("AUTH_")) {
+    if (_sender.id !== chrome.runtime.id) return false; // own extension only
+
+    //helps decide which authentication operation to execute
+    //the response goes to chrome.runtime.sendMessage in authApi.ts
+    handleAuthMessage(request as AuthRequest).then(sendResponse);
+    return true; // keep the channel open for the async response
+  }
+
   if (request.type === "FETCH_TRANSCRIPT") {
     handleTranscriptFetch(request.url)
       .then(sendResponse)
@@ -62,6 +80,28 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true; // Keep message channel open for async response
   }
 });
+
+// picks the notesService function for each notes message; any error becomes { success: false, error }
+async function handleNotesRequest(
+  request: NotesRequest,
+): Promise<NotesResponse<HighlightWithVideo | HighlightWithVideo[] | null>> {
+  try {
+    switch (request.type) {
+      case "SAVE_NOTE":
+        return { success: true, data: await saveNote(request.note) };
+      case "GET_SAVED_NOTES":
+        return { success: true, data: await getSavedNotes(request.videoId) };
+      case "DELETE_SAVED_NOTE":
+        await deleteSavedNote(request.noteId);
+        return { success: true, data: null };
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "The note operation failed.";
+    console.error("[NOTES ERROR]", error);
+    return { success: false, error: message };
+  }
+}
 
 async function handleTranslation(text: string) {
   try {

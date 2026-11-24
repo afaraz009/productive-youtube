@@ -278,13 +278,14 @@ const PopupApp: React.FC = () => {
           checked={settings.showTranscript}
           onChange={(val) => handleToggle("showTranscript", val)}
         />
+        {/* TL;DR is switched off for now (see content.ts, "TL;DR off")
         <ToggleSwitch
-          id="thumbnail-summary-toggle" 
+          id="thumbnail-summary-toggle"
           label="Thumbnail TL;DR"
           description="Hover a video and click TL;DR to flip its thumbnail into a summary"
           checked={settings.thumbnailSummary}
           onChange={(val) => handleToggle("thumbnailSummary", val)}
-        />
+        /> */}
         {/* {settings.thumbnailSummary && (
           <div className="mt-1 mb-2 p-3 space-y-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/50">
             <div>
@@ -441,6 +442,68 @@ const PopupApp: React.FC = () => {
             >
               Reset to defaults
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* Account */}
+      <div className="border-t border-slate-200 dark:border-slate-800">
+        <button
+          onClick={() => setShowAccount(!showAccount)}
+          aria-expanded={showAccount}
+          className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+        >
+          <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+            Account
+          </span>
+          <svg
+            className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${
+              showAccount ? "rotate-180" : ""
+            }`}
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M5 8l5 5 5-5" />
+          </svg>
+        </button>
+
+        {showAccount && (
+          <div className="px-6 pt-1 pb-5">
+            {auth.loading ? (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Loading…
+              </p>
+            ) : auth.user ? (
+              <AccountBar
+                user={auth.user}
+                busy={auth.busy}
+                onSignOut={() => void auth.signOut()}
+              />
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Log in or create an account to save your notes.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => void openAuthPage("login")}
+                    className="flex-1 px-3 py-2.5 text-sm font-medium rounded-md bg-[#086972] text-white hover:bg-[#07545b] transition-colors"
+                  >
+                    Log in
+                  </button>
+                  <button
+                    onClick={() => void openAuthPage("signup")}
+                    className="flex-1 px-3 py-2.5 text-sm font-medium rounded-md border border-[#cbded8] dark:border-slate-600 text-[#086972] dark:text-teal-300 hover:bg-[#edf5f1] dark:hover:bg-teal-900/20 transition-colors"
+                  >
+                    Sign up
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

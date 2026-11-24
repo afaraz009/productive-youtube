@@ -31,11 +31,13 @@ import {
 } from "./transcript";
 
 // Import thumbnail TL;DR feature
-import {
-  initThumbnailSummary,
-  applyThumbnailSummarySetting,
-  closeAllSummaryCards,
-} from "./thumbnailSummary";
+// TL;DR is switched off for now (its background handlers are missing). Uncomment this
+// import and the 3 calls below marked "TL;DR off" to turn it back on.
+// import {
+//   initThumbnailSummary,
+//   applyThumbnailSummarySetting,
+//   closeAllSummaryCards,
+// } from "./thumbnailSummary";
 
 // Track last video ID to detect video changes during SPA navigation
 let lastVideoId: string | null = null;
@@ -54,7 +56,7 @@ function initializeFullExtension(): void {
     applyAllRemovals();
 
     // Hover listeners for the thumbnail TL;DR (they check the setting on every hover)
-    initThumbnailSummary();
+    // initThumbnailSummary(); // TL;DR off
 
     // Create observer for dynamic content
     //MutationObserver -> watch for changes being made to the DOM tree
@@ -94,7 +96,7 @@ function applyAllRemovals(): void {
   // Always check these regardless of page
   removeShorts();
   removeShortsButton();
-  applyThumbnailSummarySetting();
+  // applyThumbnailSummarySetting(); // TL;DR off
   removeComments();
 
   // Page-specific removals
@@ -215,7 +217,7 @@ if (document.readyState === "loading") { //the page hasn't loaded yet so start t
 document.addEventListener("yt-navigate-finish", () => {
   // Add a small delay to let YouTube finish its navigation
   // Open TL;DR cards belong to the previous page's tiles
-  closeAllSummaryCards();
+  // closeAllSummaryCards(); // TL;DR off
   // Waiting for the YouTube navigation to finish
   setTimeout(() => {
     handleYouTubeNavigation();

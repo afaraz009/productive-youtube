@@ -14,7 +14,7 @@
 
 import { getVideoId } from "./utils";
 import { getHighlights, addHighlight, removeHighlight } from "./highlightStorage";
-import type { Point, SavedHighlight } from "./highlightStorage";
+import type { Point, SavedHighlight } from "../types";
 
 const LINE_SELECTOR = ".transcript-segment"; // one <span> per caption line
 const TOOLTIP_ID = "transcript-tooltip";
@@ -169,12 +169,9 @@ function createDeleteBtn(): HTMLElement {
     const id = deleteBtn.dataset.highlightId;
     if (!id) return; // no highlight id (e.g. an old highlight saved before ids existed)
 
-    const videoId = getVideoId();
-    if (!videoId) return; // not on a video page
-
-    // remove it from storage, then from the screen
+    // remove it from Supabase, then from the screen
     try {
-      await removeHighlight(videoId, id);
+      await removeHighlight(id);
       eraseHighlight(id);
       clearTimeout(deleteBtnHideTimer);
       deleteBtn.style.display = "none";
@@ -222,13 +219,22 @@ async function saveHighlight(): Promise<void> {
     text: clean(range.toString()).slice(0, TEXT_PREFIX_LENGTH),
   };
 
+  // what mala's notes table needs on top of the highlight:
+  // endTime = when the last line ends = its data-start (end.key) + its data-duration
+  const endNode = range.endContainer;
+  const endLine = (endNode instanceof Element ? endNode : endNode.parentElement)
+    ?.closest<HTMLElement>(LINE_SELECTOR);
+  const endTime = Number(end.key) + Number(endLine?.dataset.duration ?? 0);
+  // videoTitle = the title under the video ("" if YouTube hasn't shown it yet)
+  const videoTitle = document.querySelector("ytd-watch-metadata h1")?.textContent?.trim() ?? "";
+
   // 2. show it
   drawHighlight(range, highlight.id);
   selection.removeAllRanges();
 
   // 3. save it. If saving fails, take it off the screen again.
   try {
-    await addHighlight(videoId, highlight);
+    await addHighlight({ videoId, videoTitle, endTime, highlight });
   } catch (err) {
     console.warn("[highlight] could not save:", err);
     eraseHighlight(highlight.id);

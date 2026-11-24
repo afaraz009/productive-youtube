@@ -13,10 +13,8 @@ export default defineConfig({
       // the content script is NOT here: it's built on its own by vite.content.config.ts
       // (built together with the popup, shared code would be split out into an import it can't load)
       input: {
-
         popup: "src/popup.html",
         auth: "src/auth.html",
-        content: "src/scripts/content.ts",
         background: "src/background.ts",
         chatgpt_automation: "src/scripts/chatgpt-automation.ts",
         gemini_automation: "src/scripts/gemini-automation.ts",

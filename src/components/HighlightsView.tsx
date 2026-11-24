@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getAllHighlights } from "../scripts/transcript/highlightStorage";
-import type { HighlightWithVideo } from "../scripts/transcript/highlightStorage";
+import type { HighlightWithVideo } from "../scripts/types";
 // The "My Saved Highlights" view of the popup.
 // It replaces the settings view when "My Saved Highlights" is clicked (switching not wired up yet).
 //

@@ -28,6 +28,14 @@ export interface Settings {
   aiPrompts: AIPrompts;
 }
 
+// A saved transcript highlight (see highlightStorage.ts for what each field means).
+// Shared by the frontend (highlight.ts, HighlightsView.tsx) and the backend (src/notes/).
+export type Point = { key: string; offset: number };
+export type SavedHighlight = { id: string; start: Point; end: Point; text: string };
+
+// a saved highlight + the video it belongs to
+export type HighlightWithVideo = SavedHighlight & { videoId: string };
+
 // TL;DR summary generated for a video thumbnail (Gemini structured output)
 export interface ThumbnailSummary {
   tldr: string;
