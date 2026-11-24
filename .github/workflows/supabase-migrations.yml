@@ -8,11 +8,13 @@ on:
   pull_request:
     paths:
       - "supabase/migrations/**"
+      - "src/notes/database.types.ts"
       - ".github/workflows/supabase-migrations.yml"
   push:
     branches: [notes-integration]
     paths:
       - "supabase/migrations/**"
+      - "src/notes/database.types.ts"
       - ".github/workflows/supabase-migrations.yml"
   workflow_dispatch:
 
@@ -30,6 +32,22 @@ jobs:
       # A SQL error in any migration fails this step.
       - name: Apply migrations to a temporary database
         run: supabase start
+
+      # Final safety net, on pushes to the deploy branch only: the committed types must
+      # match the migrated schema. On pull requests the "Generate database types"
+      # workflow creates that commit, so checking there would show a temporary red.
+      - name: Generate database types from the migrated schema
+        if: github.event_name == 'push'
+        run: supabase gen types --schema public > "$RUNNER_TEMP/database.types.ts"
+
+      - name: Check committed database types are up to date
+        if: github.event_name == 'push'
+        run: |
+          if ! diff -u src/notes/database.types.ts "$RUNNER_TEMP/database.types.ts"; then
+            echo "::error file=src/notes/database.types.ts::Database types are out of date. Run 'npm run db:types' and commit the result."
+            exit 1
+          fi
+          echo "Database types are up to date"
 
       - name: Stop temporary database
         if: always()

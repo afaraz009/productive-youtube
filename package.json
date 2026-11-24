@@ -5,6 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "db:types": "supabase db reset && supabase gen types --schema public > src/notes/database.types.ts",
     "build": "vite build && npm run build:content && npm run copy-files",
     "build:content": "vite build --mode content_script && vite build --mode chatgpt_automation && vite build --mode gemini_automation && vite build --mode claude_automation && vite build --mode grok_automation",
     "preview": "vite preview",
@@ -12,6 +14,7 @@
     "clean": "rimraf dist",
     "copy-files": "node scripts/copy-files.cjs",
     "package": "npm run build && zip -r extension.zip dist/*"
+    
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.1",
