@@ -3,9 +3,10 @@ import type { SavedNote } from "../scripts/types";
 import type { Database } from "./database.types";
 
 type NoteRow = Database["public"]["Tables"]["notes"]["Row"];
+type NoteInsert = Database["public"]["Tables"]["notes"]["Insert"];
 
 //notes5...
-function toNoteRow(note: SavedNote, userId: string): NoteRow {
+function toNoteRow(note: SavedNote, userId: string): NoteInsert {
   return {
     id: note.id,
     user_id: userId,
