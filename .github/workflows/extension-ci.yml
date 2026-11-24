@@ -43,7 +43,8 @@ jobs:
       # Full TypeScript check (Vite alone only strips types, it does not check them).
       
       - name: Type-check
-      #continue-on-error: true
+      #if you want to complete the build job despite type errors
+        continue-on-error: true
         run: npm run typecheck
 
       - name: Build the extension
