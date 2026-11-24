@@ -1,0 +1,71 @@
+name: Generate database types
+
+# When a pull request changes migration files, rebuild the schema in a temporary
+# database, regenerate src/notes/database.types.ts from it, and commit the result
+# to the pull request branch. Developers never edit database.types.ts by hand.
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+
+# One run per branch at a time; a newer push cancels an older run
+concurrency:
+  group: db-types-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    # Only for branches in this repository. Pull requests from forks cannot be pushed to.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the pull request branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          # No custom token: the built-in GITHUB_TOKEN pushes the commit (see
+          # `permissions` above). Commits pushed this way do not start other workflows,
+          # so re-run the checks after the types commit appears (close and reopen the PR,
+          # or push an empty commit). To change that, add a personal access token here
+          # as `token: ${{ secrets.TYPES_BOT_TOKEN }}`.
+
+      - name: Install the Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 3.2.0
+
+      # Starts a temporary database and applies every migration in order
+      - name: Start a temporary Supabase
+        run: supabase start
+
+      - name: Generate types from the migrated schema
+        run: supabase gen types --schema public > src/notes/database.types.ts
+
+      - name: Stop the temporary Supabase
+        if: always()
+        run: supabase stop --no-backup
+
+      # Sanity check: the file must look like generated TypeScript, not CLI messages
+      - name: Check the generated file
+        run: |
+          head -n 1 src/notes/database.types.ts | grep -q "^export type Json" || {
+            echo "::error::Generated file does not start with 'export type Json'. Output may contain CLI messages."
+            exit 1
+          }
+
+      - name: Commit the types if they changed
+        run: |
+          if git diff --quiet -- src/notes/database.types.ts; then
+            echo "Database types are already up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/notes/database.types.ts
+          git commit -m "chore: regenerate database types"
+          git push
