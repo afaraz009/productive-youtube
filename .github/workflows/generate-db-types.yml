@@ -44,23 +44,30 @@ jobs:
         run: supabase start
 
       - name: Generate types from the migrated schema
-        run: supabase gen types --schema public > src/notes/database.types.ts
+        run: |
+          supabase gen types --schema public > src/notes/database.types.ts
+          # Normalize: drop a UTF-8 byte-order mark and Windows line endings if present
+          sed -i '1s/^\xEF\xBB\xBF//; s/\r$//' src/notes/database.types.ts
 
       - name: Stop the temporary Supabase
         if: always()
         run: supabase stop --no-backup
 
       # Sanity check: the file must look like generated TypeScript, not CLI messages.
-      # The first lines are printed so a failure shows what the CLI actually wrote.
+      # The first bytes are printed so a failure shows exactly what the CLI wrote.
+      # (No pipes here, so pipefail / SIGPIPE cannot cause a false failure.)
       - name: Check the generated file
         run: |
-          echo "---- first 8 lines of the generated file ----"
+          echo "---- first 8 lines ----"
           head -n 8 src/notes/database.types.ts
-          echo "---- number of lines: $(wc -l < src/notes/database.types.ts) ----"
-          head -n 1 src/notes/database.types.ts | grep -q "^export type Json" || {
-            echo "::error::Generated file does not start with 'export type Json'. See the lines printed above."
+          echo "---- first 40 bytes ----"
+          head -c 40 src/notes/database.types.ts | od -c
+          first_line="$(head -n 1 src/notes/database.types.ts)"
+          if [[ "$first_line" != "export type Json"* ]]; then
+            echo "::error::Generated file does not start with 'export type Json'. See the bytes printed above."
             exit 1
-          }
+          fi
+          echo "Generated file looks valid"
 
       - name: Commit the types if they changed
         run: |
