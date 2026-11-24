@@ -50,11 +50,15 @@ jobs:
         if: always()
         run: supabase stop --no-backup
 
-      # Sanity check: the file must look like generated TypeScript, not CLI messages
+      # Sanity check: the file must look like generated TypeScript, not CLI messages.
+      # The first lines are printed so a failure shows what the CLI actually wrote.
       - name: Check the generated file
         run: |
+          echo "---- first 8 lines of the generated file ----"
+          head -n 8 src/notes/database.types.ts
+          echo "---- number of lines: $(wc -l < src/notes/database.types.ts) ----"
           head -n 1 src/notes/database.types.ts | grep -q "^export type Json" || {
-            echo "::error::Generated file does not start with 'export type Json'. Output may contain CLI messages."
+            echo "::error::Generated file does not start with 'export type Json'. See the lines printed above."
             exit 1
           }
 
