@@ -43,6 +43,9 @@ jobs:
       - name: Start a temporary Supabase
         run: supabase start
 
+      # The CLI prints its own messages (Target, update notices) to stderr, so only
+      # the TypeScript lands in the file. The raw output is committed unchanged, which
+      # keeps CI and `npm run db:types` byte-for-byte identical.
       - name: Generate types from the migrated schema
         run: supabase gen types --schema public > src/notes/database.types.ts
 
@@ -50,13 +53,18 @@ jobs:
         if: always()
         run: supabase stop --no-backup
 
-      # Sanity check: the file must look like generated TypeScript, not CLI messages
+      # Sanity check: the file must be generated TypeScript, not an error message.
+      # The CLI starts its output with a blank line, so the first NON-EMPTY line is checked.
       - name: Check the generated file
         run: |
-          head -n 1 src/notes/database.types.ts | grep -q "^export type Json" || {
-            echo "::error::Generated file does not start with 'export type Json'. Output may contain CLI messages."
+          echo "---- first 6 lines ----"
+          head -n 6 src/notes/database.types.ts
+          first_line="$(grep -m1 -v '^[[:space:]]*$' src/notes/database.types.ts || true)"
+          if [[ "$first_line" != "export type Json"* ]]; then
+            echo "::error::Generated file does not start with 'export type Json'. See the lines printed above."
             exit 1
-          }
+          fi
+          echo "Generated file looks valid"
 
       - name: Commit the types if they changed
         run: |
